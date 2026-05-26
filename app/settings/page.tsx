@@ -98,21 +98,65 @@ export default function SettingsPage() {
   const [deleteConfirmed, setDeleteConfirmed]     = useState(false)
   const [deleting, setDeleting]                   = useState(false)
   const [deleteError, setDeleteError]             = useState('')
-  // Pro state
-  const [userEmail, setUserEmail]   = useState<string | null>(null)
-  const [proActive, setProActive]   = useState(false)
-  const [proCode, setProCode]       = useState('')
-  const [proError, setProError]     = useState('')
-  const [proSuccess, setProSuccess] = useState(false)
+  // Pro / subscription state
+  const [userEmail, setUserEmail]       = useState<string | null>(null)
+  const [proActive, setProActive]       = useState(false)
+  const [proCode, setProCode]           = useState('')
+  const [proError, setProError]         = useState('')
+  const [proSuccess, setProSuccess]     = useState(false)
+  const [stripeActive, setStripeActive] = useState(false)   // paid via Stripe
+  const [subLoading, setSubLoading]     = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
 
-  // ── Pro ─────────────────────────────────────────────────────────
+  // ── Pro / Subscription ──────────────────────────────────────────
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data }) => {
       const email = data.user?.email ?? null
       setUserEmail(email)
       setProActive(isProUser(email))
+
+      // Check Stripe subscription in DB
+      if (data.user) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('status')
+          .eq('user_id', data.user.id)
+          .single()
+
+        if (sub?.status === 'active') {
+          setStripeActive(true)
+          setProActive(true)
+          localStorage.setItem('galaxy-pro-active', 'true')
+        }
+      }
     })
   }, [])
+
+  const handleUpgrade = async () => {
+    setSubLoading(true)
+    try {
+      const res  = await fetch('/api/stripe/create-checkout', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else setProError(data.error || 'حدث خطأ')
+    } catch {
+      setProError('تعذّر الاتصال بخادم الدفع')
+    }
+    setSubLoading(false)
+  }
+
+  const handlePortal = async () => {
+    setPortalLoading(true)
+    try {
+      const res  = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch {
+      /* silent */
+    }
+    setPortalLoading(false)
+  }
 
   const handleActivatePro = () => {
     setProError('')
@@ -407,6 +451,7 @@ export default function SettingsPage() {
         /* ── Pro Active Card ── */
         <div className="rounded-2xl p-5 flex flex-col gap-3 animate-fade-in"
           style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06))', border: '1px solid rgba(245,158,11,0.35)' }}>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
@@ -417,8 +462,10 @@ export default function SettingsPage() {
                 <p className="font-black text-base" style={{ color: '#f59e0b' }}>Galaxy Pro</p>
                 <p className="text-xs text-white/50">
                   {isAdmin(userEmail)
-                    ? t('مفعّل (حساب المشرف)', 'Active (Admin account)')
-                    : t('مفعّل', 'Active')}
+                    ? t('مفعّل — حساب المشرف', 'Active — Admin')
+                    : stripeActive
+                      ? t('اشتراك شهري نشط', 'Monthly subscription active')
+                      : t('مفعّل بكود', 'Activated with code')}
                 </p>
               </div>
             </div>
@@ -428,13 +475,12 @@ export default function SettingsPage() {
             </span>
           </div>
 
-          {/* Benefits */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { icon: '📷', ar: 'تصوير غير محدود', en: 'Unlimited scans' },
-              { icon: '📋', ar: 'خطط غذائية غير محدودة', en: 'Unlimited plans' },
-              { icon: '⚡', ar: 'ذكاء اصطناعي كامل', en: 'Full AI access' },
-              { icon: '🚫', ar: 'بدون قيود', en: 'No limits' },
+              { icon: '📷', ar: 'تصوير غير محدود',        en: 'Unlimited scans'   },
+              { icon: '📋', ar: 'خطط غذائية غير محدودة',  en: 'Unlimited plans'   },
+              { icon: '⚡', ar: 'ذكاء اصطناعي كامل',      en: 'Full AI access'    },
+              { icon: '🚫', ar: 'بدون قيود',               en: 'No limits'         },
             ].map(b => (
               <div key={b.en} className="flex items-center gap-2 px-3 py-2 rounded-xl"
                 style={{ background: 'rgba(245,158,11,0.07)' }}>
@@ -444,67 +490,107 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          {/* Deactivate (only for non-admin) */}
-          {!isAdmin(userEmail) && (
+          {/* Manage Stripe subscription */}
+          {stripeActive && (
+            <button
+              onClick={handlePortal}
+              disabled={portalLoading}
+              className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+              style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+              {portalLoading ? '...' : t('⚙️ إدارة الاشتراك / الإلغاء', '⚙️ Manage / Cancel subscription')}
+            </button>
+          )}
+
+          {/* Deactivate code-only Pro */}
+          {!isAdmin(userEmail) && !stripeActive && (
             <button onClick={handleDeactivatePro}
-              className="text-xs text-center mt-1"
-              style={{ color: 'rgba(255,255,255,0.25)' }}>
+              className="text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
               {t('إلغاء التفعيل', 'Deactivate')}
             </button>
           )}
         </div>
+
       ) : (
-        /* ── Pro Activation Card ── */
-        <div className="rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
-              style={{ background: 'rgba(245,158,11,0.1)' }}>
-              ⭐
-            </div>
-            <div>
-              <p className="font-black text-base text-white">Galaxy Pro</p>
-              <p className="text-xs text-white/40">{t('أدخل كود التفعيل', 'Enter activation code')}</p>
-            </div>
-          </div>
+        /* ── Upgrade Card ── */
+        <div className="rounded-2xl overflow-hidden"
+          style={{ border: '1px solid rgba(245,158,11,0.25)' }}>
 
-          {/* Preview of Pro benefits */}
-          <div className="flex gap-2 flex-wrap">
-            {['📷 ∞', '📋 ∞', '⚡ AI', '🚫 قيود'].map(b => (
-              <span key={b} className="text-xs px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(245,158,11,0.08)', color: 'rgba(245,158,11,0.7)', border: '1px solid rgba(245,158,11,0.15)' }}>
-                {b}
-              </span>
-            ))}
-          </div>
+          {/* Header */}
+          <div className="p-5 flex flex-col gap-4"
+            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(251,191,36,0.04))' }}>
 
-          {/* Code input */}
-          <div className="flex gap-2">
-            <input
-              value={proCode}
-              onChange={e => { setProCode(e.target.value); setProError('') }}
-              onKeyDown={e => e.key === 'Enter' && handleActivatePro()}
-              placeholder={t('أدخل الكود هنا', 'Enter code here')}
-              dir="ltr"
-              className="galaxy-input flex-1 px-3 py-2.5 text-sm font-mono"
-            />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
+                  style={{ background: 'rgba(245,158,11,0.12)' }}>⭐</div>
+                <div>
+                  <p className="font-black text-base text-white">Galaxy Pro</p>
+                  <p className="text-xs text-white/40">{t('اشتراك شهري', 'Monthly subscription')}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-black" style={{ color: '#f59e0b' }}>9.99</p>
+                <p className="text-xs text-white/40">{t('درهم / شهر', 'AED / mo')}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: '📷', ar: 'تصوير غير محدود',       en: 'Unlimited scans'  },
+                { icon: '📋', ar: 'خطط غذائية ∞',          en: 'Unlimited plans'  },
+                { icon: '⚡', ar: 'ذكاء اصطناعي كامل',     en: 'Full AI access'   },
+                { icon: '🔄', ar: 'إلغاء في أي وقت',       en: 'Cancel anytime'   },
+              ].map(b => (
+                <div key={b.en} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(245,158,11,0.06)' }}>
+                  <span className="text-sm">{b.icon}</span>
+                  <span className="text-xs text-white/60">{t(b.ar, b.en)}</span>
+                </div>
+              ))}
+            </div>
+
             <button
-              onClick={handleActivatePro}
-              disabled={!proCode.trim()}
-              className="px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-40 transition-all"
+              onClick={handleUpgrade}
+              disabled={subLoading}
+              className="w-full py-4 rounded-2xl font-black text-base disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', color: '#09090D' }}>
-              {t('تفعيل', 'Activate')}
+              {subLoading
+                ? t('جارٍ التحميل...', 'Loading...')
+                : t('⭐ اشترك الآن — 9.99 درهم/شهر', '⭐ Subscribe — AED 9.99/mo')}
             </button>
+
+            {proError && (
+              <p className="text-xs text-center" style={{ color: '#ef4444' }}>✗ {proError}</p>
+            )}
           </div>
 
-          {proError && (
-            <p className="text-xs text-center" style={{ color: '#ef4444' }}>✗ {proError}</p>
-          )}
-          {proSuccess && (
-            <p className="text-xs text-center font-bold" style={{ color: '#10b981' }}>
-              ✅ {t('Galaxy Pro مفعّل! استمتع بالوصول الكامل', 'Galaxy Pro activated! Enjoy full access')}
-            </p>
-          )}
+          {/* Code activation (collapsed / secondary) */}
+          <div className="px-5 py-3 flex flex-col gap-2"
+            style={{ background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-[11px] text-white/30 text-center">{t('أو فعّل بكود إذا لديك', 'Or activate with a code')}</p>
+            <div className="flex gap-2">
+              <input
+                value={proCode}
+                onChange={e => { setProCode(e.target.value); setProError('') }}
+                onKeyDown={e => e.key === 'Enter' && handleActivatePro()}
+                placeholder={t('أدخل الكود هنا', 'Enter code here')}
+                dir="ltr"
+                className="galaxy-input flex-1 px-3 py-2 text-xs font-mono"
+              />
+              <button
+                onClick={handleActivatePro}
+                disabled={!proCode.trim()}
+                className="px-3 py-2 rounded-xl font-bold text-xs disabled:opacity-40"
+                style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                {t('تفعيل', 'Activate')}
+              </button>
+            </div>
+            {proSuccess && (
+              <p className="text-xs text-center font-bold" style={{ color: '#10b981' }}>
+                ✅ {t('Galaxy Pro مفعّل!', 'Galaxy Pro activated!')}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
