@@ -1,0 +1,334 @@
+import { NextRequest } from 'next/server'
+
+export const maxDuration = 60
+
+interface NutritionTargets {
+  water: number      // liters/day
+  calories: number   // kcal/day
+  protein: number    // g/day
+  carbs: number      // g/day
+  fat: number        // g/day
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { goal, gender, activity, diet, age, weight, height, language, targets } = body
+    const lang = (language as string) === 'en' ? 'en' : 'ar'
+    const t = targets as NutritionTargets | undefined
+
+    if (!goal || !age || !weight) {
+      return new Response(
+        JSON.stringify({ error: lang === 'ar' ? 'بيانات ناقصة' : 'Missing data' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: lang === 'ar' ? 'مفتاح API غير متوفر' : 'API key missing' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // ── Label helpers ─────────────────────────────────────────────────────────
+    const genderLabel = lang === 'ar'
+      ? (gender === 'female' ? 'أنثى' : 'ذكر')
+      : (gender === 'female' ? 'Female' : 'Male')
+
+    // ── Diet type descriptions for AI ────────────────────────────────────────
+    const dietMap: Record<string, { ar: string; en: string }> = {
+      balanced: {
+        ar: 'متوازن (30% بروتين، 40% كارب، 30% دهون صحية — مناسب لجميع الأهداف)',
+        en: 'Balanced (~30% protein, ~40% carbs, ~30% healthy fats — suitable for all goals)',
+      },
+      keto: {
+        ar: 'كيتو (70-75% دهون، 20-25% بروتين، 5% كارب فقط، أقل من 50g كارب/يوم لتحقيق الكيتوسيس — تجنب الحبوب والسكريات والنشويات تماماً)',
+        en: 'Keto (70-75% fat, 20-25% protein, only 5% carbs (<50g/day) to achieve ketosis — avoid all grains, sugars, and starches)',
+      },
+      mediterranean: {
+        ar: 'متوسطي (خضروات وفيرة، زيت زيتون، أسماك وبروتين خفيف، بقوليات، حبوب كاملة معتدلة، دهون صحية غير مشبعة — صحي للقلب)',
+        en: 'Mediterranean (abundant vegetables, olive oil, fish & lean protein, legumes, moderate whole grains, unsaturated healthy fats — heart-healthy)',
+      },
+      intermittent: {
+        ar: 'صيام متقطع 16:8 (جميع الوجبات في نافذة 8 ساعات فقط مثلاً 12pm-8pm — لا وجبة إفطار صباحي، ابدأ بوجبة الغداء، وزّع الكميات على غداء + عشاء + سناك فقط)',
+        en: 'Intermittent Fasting 16:8 (all meals within an 8-hour window e.g. 12pm–8pm — no morning breakfast, start with lunch, distribute meals as: lunch + dinner + snack only)',
+      },
+      lowcarb: {
+        ar: 'كارب منخفض (أقل من 100g كارب/يوم، تركيز على البروتين العالي والدهون الصحية، تجنب السكريات والنشويات المكررة)',
+        en: 'Low Carb (under 100g carbs/day, focus on high protein and healthy fats, avoid refined sugars and starches)',
+      },
+    }
+    // If diet is a known preset use its full description; otherwise pass the raw string
+    // and let the AI interpret it (user may have typed "عد السعرات", "paleo", etc.)
+    const dietLabel = lang === 'ar'
+      ? (dietMap[diet]?.ar ?? diet)
+      : (dietMap[diet]?.en ?? diet)
+    const isCustomDiet = !dietMap[diet]
+
+    // ── System prompt ────────────────────────────────────────────────────────
+    const macroSummaryFormatAr = t
+      ? `بعد الأهداف اليومية، أضف مباشرةً جدول ملخص الوجبات بهذا التنسيق الحرفي بالضبط:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 ملخص توزيع الوجبات
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌅 الفطور
+   بروتين: __غ  |  كارب: __غ  |  دهون: __غ  |  🔥 __ سعرة
+
+☀️ الغداء
+   بروتين: __غ  |  كارب: __غ  |  دهون: __غ  |  🔥 __ سعرة
+
+🌙 العشاء
+   بروتين: __غ  |  كارب: __غ  |  دهون: __غ  |  🔥 __ سعرة
+
+[🍎 سناك — أضفه فقط إذا النظام والسعرات يسمحان]
+   بروتين: __غ  |  كارب: __غ  |  دهون: __غ  |  🔥 __ سعرة
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+المجموع | بروتين: ${t.protein}غ | كارب: ${t.carbs}غ | دهون: ${t.fat}غ | 🔥 ${t.calories} سعرة
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+قواعد صارمة:
+- استبدل __ بالأرقام الفعلية، مجموعها = ${t.protein}غ بروتين، ${t.carbs}غ كارب، ${t.fat}غ دهون، ${t.calories} سعرة
+- توزيع: فطور ~28%، غداء ~38%، عشاء ~27%، سناك ~7% فقط إن وُجد
+- لا تضف سناك في الصيام المتقطع أو إذا السعرات أقل من 1500
+- بعد الجدول مباشرةً: اشرح كل وجبة مع أمثلة الأطعمة الفعلية والكميات`
+      : `After the daily targets, immediately add a meal macro table in this EXACT format:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Meal Macro Breakdown
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌅 Breakfast
+   Protein: __g  |  Carbs: __g  |  Fat: __g  |  🔥 __ kcal
+
+☀️ Lunch
+   Protein: __g  |  Carbs: __g  |  Fat: __g  |  🔥 __ kcal
+
+🌙 Dinner
+   Protein: __g  |  Carbs: __g  |  Fat: __g  |  🔥 __ kcal
+
+[🍎 Snack — include ONLY if diet and calorie budget allow]
+   Protein: __g  |  Carbs: __g  |  Fat: __g  |  🔥 __ kcal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total | Protein: ${t?.protein}g | Carbs: ${t?.carbs}g | Fat: ${t?.fat}g | 🔥 ${t?.calories} kcal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+    const macroSummaryFormatEn = t
+      ? `After the daily targets, immediately add a meal summary table in this EXACT format (copy the separators literally):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Meal Macro Breakdown
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌅 Breakfast
+   Protein: Xg  |  Carbs: Xg  |  Fat: Xg  |  🔥 XXX kcal
+
+☀️ Lunch
+   Protein: Xg  |  Carbs: Xg  |  Fat: Xg  |  🔥 XXX kcal
+
+🌙 Dinner
+   Protein: Xg  |  Carbs: Xg  |  Fat: Xg  |  🔥 XXX kcal
+
+[🍎 Snack — include ONLY if calorie budget allows]
+   Protein: Xg  |  Carbs: Xg  |  Fat: Xg  |  🔥 XXX kcal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total | Protein: ${t.protein}g | Carbs: ${t.carbs}g | Fat: ${t.fat}g | 🔥 ${t.calories} kcal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Numbers must add up exactly. Split: Breakfast 25-30%, Lunch 35-40%, Dinner 25-30%, Snack 5-15% if included.
+Then describe each meal with real food examples.`
+      : ''
+
+    const systemPrompt = lang === 'ar'
+      ? `أنت أخصائي تغذية. مهمتك إخراج ملخص ماكرو دقيق فقط — بدون ذكر أي أطعمة أو وصفات.
+${isCustomDiet ? `النظام الغذائي المختار: ${dietLabel} — خذه بعين الاعتبار عند توزيع الماكروز.` : ''}
+
+الإخراج المطلوب بالترتيب (لا تضف أي شيء خارجه):
+
+1. سطر واحد للأهداف اليومية:
+💧 ${t ? t.water : '—'}ل  🔥 ${t ? t.calories : '—'} سعرة  💪 ${t ? t.protein : '—'}غ بروتين  🌾 ${t ? t.carbs : '—'}غ كارب  🥑 ${t ? t.fat : '—'}غ دهون
+
+2. جدول توزيع الوجبات (بهذا التنسيق الحرفي بالضبط):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 توزيع الوجبات
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌅 الفطور
+   💪 بروتين: __غ  |  🌾 كارب: __غ  |  🥑 دهون: __غ  |  🔥 __ سعرة
+
+☀️ الغداء
+   💪 بروتين: __غ  |  🌾 كارب: __غ  |  🥑 دهون: __غ  |  🔥 __ سعرة
+
+🌙 العشاء
+   💪 بروتين: __غ  |  🌾 كارب: __غ  |  🥑 دهون: __غ  |  🔥 __ سعرة
+
+[أضف سناك فقط إذا السعرات > 1600 والنظام ليس صياماً متقطعاً]
+🍎 سناك
+   💪 بروتين: __غ  |  🌾 كارب: __غ  |  🥑 دهون: __غ  |  🔥 __ سعرة
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 المجموع: بروتين ${t ? t.protein : '__'}غ | كارب ${t ? t.carbs : '__'}غ | دهون ${t ? t.fat : '__'}غ | 🔥 ${t ? t.calories : '__'} سعرة
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. نصيحتان مختصرتان (سطر واحد لكل نصيحة).
+
+قواعد صارمة:
+- استبدل __ بأرقام حقيقية تجمع بالضبط على الأهداف
+- لا تذكر أسماء أطعمة أو وصفات أو مكونات إطلاقاً
+- لا تكتب جملاً طويلة — فقط الجدول والنصيحتان
+- توزيع: فطور ~28%، غداء ~38%، عشاء ~27%، سناك ~7% إن وُجد`
+      : `You are a nutritionist. Output ONLY a concise macro summary — no food names, no recipes, no ingredient lists.
+${isCustomDiet ? `Diet type: ${dietLabel} — factor it into the macro distribution.` : ''}
+
+Required output in order (nothing else):
+
+1. One line with daily targets:
+💧 ${t ? t.water : '—'}L  🔥 ${t ? t.calories : '—'} kcal  💪 ${t ? t.protein : '—'}g protein  🌾 ${t ? t.carbs : '—'}g carbs  🥑 ${t ? t.fat : '—'}g fat
+
+2. Meal breakdown table (exact format):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Meal Breakdown
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌅 Breakfast
+   💪 Protein: __g  |  🌾 Carbs: __g  |  🥑 Fat: __g  |  🔥 __ kcal
+
+☀️ Lunch
+   💪 Protein: __g  |  🌾 Carbs: __g  |  🥑 Fat: __g  |  🔥 __ kcal
+
+🌙 Dinner
+   💪 Protein: __g  |  🌾 Carbs: __g  |  🥑 Fat: __g  |  🔥 __ kcal
+
+[Add Snack ONLY if calories > 1600 and diet is not intermittent fasting]
+🍎 Snack
+   💪 Protein: __g  |  🌾 Carbs: __g  |  🥑 Fat: __g  |  🔥 __ kcal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Total: Protein ${t ? t.protein : '__'}g | Carbs ${t ? t.carbs : '__'}g | Fat ${t ? t.fat : '__'}g | 🔥 ${t ? t.calories : '__'} kcal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. Two short tips (one line each).
+
+Strict rules:
+- Replace __ with real numbers that add up exactly to the targets
+- Do NOT mention any food names, recipes, or ingredients
+- No long sentences — only the table and two tips
+- Split: Breakfast ~28%, Lunch ~38%, Dinner ~27%, Snack ~7% if included`
+
+    const activityMap: Record<string, { ar: string; en: string }> = {
+      sedentary:  { ar: 'خامل (لا رياضة)',        en: 'Sedentary (no exercise)'  },
+      light:      { ar: 'خفيف (1-3 أيام/أسبوع)',  en: 'Light (1-3 days/week)'    },
+      moderate:   { ar: 'معتدل (3-5 أيام/أسبوع)', en: 'Moderate (3-5 days/week)' },
+      active:     { ar: 'نشيط (6-7 أيام/أسبوع)',  en: 'Active (6-7 days/week)'   },
+      veryActive: { ar: 'مكثف (رياضة شديدة)',       en: 'Very Active (intense)'    },
+    }
+    const activityLabel = lang === 'ar'
+      ? (activityMap[activity]?.ar ?? activity)
+      : (activityMap[activity]?.en ?? activity)
+
+    const goalMap: Record<string, { ar: string; en: string }> = {
+      'weight-loss':    { ar: 'تخفيف الوزن',         en: 'Weight Loss'     },
+      'muscle-gain':    { ar: 'بناء الكتلة العضلية', en: 'Muscle Gain'     },
+      'maintain':       { ar: 'الحفاظ على الوزن',    en: 'Maintain Weight' },
+      'general-health': { ar: 'صحة عامة',             en: 'General Health'  },
+    }
+    const goalLabel = lang === 'ar'
+      ? (goalMap[goal]?.ar ?? goal)
+      : (goalMap[goal]?.en ?? goal)
+
+    // ── User prompt ───────────────────────────────────────────────────────────
+    const targetsBlockAr = t
+      ? `\n\n🎯 أهدافي اليومية الشخصية (التزم بها بالضبط):\n💧 ماء: ${t.water} لتر\n🔥 سعرات: ${t.calories} سعرة\n💪 بروتين: ${t.protein} جرام\n🌾 كربوهيدرات: ${t.carbs} جرام\n🥑 دهون: ${t.fat} جرام`
+      : ''
+
+    const targetsBlockEn = t
+      ? `\n\n🎯 My personal daily targets (use these exactly):\n💧 Water: ${t.water}L\n🔥 Calories: ${t.calories} kcal\n💪 Protein: ${t.protein}g\n🌾 Carbs: ${t.carbs}g\n🥑 Fat: ${t.fat}g`
+      : ''
+
+    const userPrompt = lang === 'ar'
+      ? `الجنس: ${genderLabel}\nالعمر: ${age} سنة\nالوزن: ${weight} كجم\nالطول: ${height} سم\nمستوى النشاط: ${activityLabel}\nالهدف: ${goalLabel}\nنوع النظام الغذائي: ${dietLabel}${targetsBlockAr}\n\nاكتب خطة تغذية يومية شاملة ومفصلة لهذا الشخص باللغة العربية، مع شرح مبادئ النظام الغذائي المختار.`
+      : `Gender: ${genderLabel}\nAge: ${age} years\nWeight: ${weight} kg\nHeight: ${height} cm\nActivity Level: ${activityLabel}\nGoal: ${goalLabel}\nDiet Type: ${dietLabel}${targetsBlockEn}\n\nWrite a comprehensive detailed daily nutrition plan for this person, explaining the chosen diet type principles.`
+
+    // ── Call OpenRouter ───────────────────────────────────────────────────────
+    const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization':  `Bearer ${apiKey}`,
+        'Content-Type':   'application/json',
+        'HTTP-Referer':   'https://galaxynutrition.app',
+        'X-Title':        'GalaxyNutrition',
+      },
+      body: JSON.stringify({
+        model:      'openai/gpt-4o-mini',
+        stream:     true,
+        max_tokens: 2000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
+        ],
+      }),
+    })
+
+    if (!upstream.ok || !upstream.body) {
+      const errText = await upstream.text().catch(() => 'unknown')
+      console.error('[generate-plan] OpenRouter error:', upstream.status, errText)
+      let detail = `OpenRouter ${upstream.status}: ${errText.slice(0, 200)}`
+      try {
+        const parsed = JSON.parse(errText)
+        const msg = parsed?.error?.message ?? parsed?.message ?? null
+        if (msg) detail = `(${upstream.status}) ${msg}`
+      } catch { /* keep raw */ }
+      return new Response(
+        JSON.stringify({ error: detail }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // ── Stream SSE → plain text ───────────────────────────────────────────────
+    const encoder = new TextEncoder()
+    const readable = new ReadableStream({
+      async start(controller) {
+        const reader  = upstream.body!.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buf += decoder.decode(value, { stream: true })
+            const lines = buf.split('\n')
+            buf = lines.pop() ?? ''
+            for (const line of lines) {
+              const trimmed = line.trim()
+              if (!trimmed.startsWith('data:')) continue
+              const data = trimmed.slice(5).trim()
+              if (data === '[DONE]') { controller.close(); return }
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.error) {
+                  controller.error(new Error(parsed.error?.message ?? 'OpenRouter error'))
+                  return
+                }
+                const text = parsed.choices?.[0]?.delta?.content
+                if (text) controller.enqueue(encoder.encode(text))
+              } catch { /* skip malformed lines */ }
+            }
+          }
+        } catch (e) { controller.error(e); return }
+        controller.close()
+      },
+    })
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type':      'text/plain; charset=utf-8',
+        'Cache-Control':     'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    })
+  } catch (err) {
+    console.error('[generate-plan] Unexpected error:', err)
+    return new Response(
+      JSON.stringify({ error: 'حدث خطأ غير متوقع' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+}

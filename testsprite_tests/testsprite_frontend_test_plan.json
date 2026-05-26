@@ -1,0 +1,1702 @@
+[
+  {
+    "id": "TC001",
+    "title": "Create an account successfully",
+    "description": "A new user can register with matching details and reach the onboarding flow afterward.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the name field with a new user name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with a new unique email"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the confirm password field with the same password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the onboarding wizard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "View the main dashboard health summary",
+    "description": "A logged-in member can open the dashboard and review the core daily progress widgets needed for tracking.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify calorie progress is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify macro, BMI, water, and weight progress are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Sign in to the dashboard",
+    "description": "A returning member can log in with valid credentials and land on the main dashboard.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Complete onboarding and save targets",
+    "description": "A new user can complete the full onboarding wizard and save a profile with calculated nutrition targets.",
+    "category": "Onboarding Wizard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Enter profile details on the first step"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next step"
+      },
+      {
+        "type": "action",
+        "description": "Enter body measurements on the next step"
+      },
+      {
+        "type": "action",
+        "description": "Proceed through the remaining steps to the summary"
+      },
+      {
+        "type": "action",
+        "description": "Complete setup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved profile is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify daily nutrition targets are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Quick add a food from search",
+    "description": "A logged-in member can search the local food catalog, add a food item, and see today's totals update on the dashboard and in the meal list.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Search for a food item from the catalog"
+      },
+      {
+        "type": "action",
+        "description": "Add the selected food to today's log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard nutrition totals are updated"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify today's meal list includes the new entry"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Add a meal entry from the dashboard",
+    "description": "A logged-in member can open the food entry flow from the dashboard, save a meal, and see it appear in today's list.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the food entry flow"
+      },
+      {
+        "type": "action",
+        "description": "Enter a meal name and details"
+      },
+      {
+        "type": "action",
+        "description": "Save the entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new meal appears in today's list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Delete a meal from today",
+    "description": "A logged-in member can remove a meal entry from the dashboard and see today's totals recalculate.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Delete a meal entry from today's list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the meal is removed from today's list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard totals are updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Update water and weight from the dashboard",
+    "description": "A logged-in member can add water intake and a weight entry from the dashboard and see the related progress views update.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Add a water amount from the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add a weight entry from the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify water intake is updated"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the weight chart reflects the new entry"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Add a meal to the correct meal group",
+    "description": "A logged-in user can create a meal entry in the meal log and see it appear in the correct meal group.",
+    "category": "Meal Log",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the meal log link"
+      },
+      {
+        "type": "action",
+        "description": "Open the food entry flow"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a meal name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid food quantity"
+      },
+      {
+        "type": "action",
+        "description": "Select a meal type"
+      },
+      {
+        "type": "action",
+        "description": "Save the food entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new meal entry is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the meal appears in the selected meal group"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Log a catalog exercise and see it reflected today",
+    "description": "This verifies a logged-in member can find a catalog exercise, calculate calories burned, add it to today's workout list, and see the new entry reflected in the workout tracker.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Search for an exercise from the catalog"
+      },
+      {
+        "type": "action",
+        "description": "Select a matching exercise from the results"
+      },
+      {
+        "type": "action",
+        "description": "Adjust the exercise duration"
+      },
+      {
+        "type": "action",
+        "description": "Calculate the calories burned"
+      },
+      {
+        "type": "action",
+        "description": "Add the exercise to today's workout log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify today's workout entry is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the burned calories summary is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Scan a food photo and add detected foods",
+    "description": "A logged-in member can upload a food image, review detected items, and add them to today's log.",
+    "category": "AI Food Scanner",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /scan"
+      },
+      {
+        "type": "action",
+        "description": "Upload a food image file"
+      },
+      {
+        "type": "action",
+        "description": "Review the detected foods"
+      },
+      {
+        "type": "action",
+        "description": "Add the detected foods to today's log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the detected foods are added to the meal log"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Review today's meal summary and grouped meals",
+    "description": "A logged-in user can open the meal log and see today's calorie and macro summary with meals grouped by meal type.",
+    "category": "Meal Log",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the meal log link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify today's calorie and macro summary is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify meals are grouped by meal type"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Log a workout and see calories burned",
+    "description": "A logged-in member can search or enter an exercise, save it, and see the workout list and calorie burn update.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Search for an exercise or enter a custom exercise"
+      },
+      {
+        "type": "action",
+        "description": "Set a valid workout duration"
+      },
+      {
+        "type": "action",
+        "description": "Save the workout entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the exercise list includes the new entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify calories burned are calculated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Delete a meal entry from today's log",
+    "description": "A logged-in user can remove a food entry from today's meal log and see it disappear from the list.",
+    "category": "Meal Log",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the meal log link"
+      },
+      {
+        "type": "action",
+        "description": "Open the food entry flow"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a meal name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid food quantity"
+      },
+      {
+        "type": "action",
+        "description": "Select a meal type"
+      },
+      {
+        "type": "action",
+        "description": "Save the food entry"
+      },
+      {
+        "type": "action",
+        "description": "Delete the meal entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the meal entry is removed from today's list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "View workout calories and net summary after logging exercise",
+    "description": "This verifies a logged-in member can review the workout page summaries after adding exercise and see the burned calories and net calorie values update.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Add an exercise to today's workout log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the burned calories summary is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the net calories summary is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC016",
+    "title": "Show invalid login feedback",
+    "description": "A user entering incorrect credentials sees an authentication error and cannot access the dashboard.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with an invalid email"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with an invalid password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an invalid credentials message is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is not displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC017",
+    "title": "Log a meal from the daily log",
+    "description": "A logged-in member can add a meal in the log view and see it appear in the grouped meal list.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /log"
+      },
+      {
+        "type": "action",
+        "description": "Add a meal entry from the log view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new meal appears in the grouped meal list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC018",
+    "title": "Log a custom exercise with manual calorie adjustment",
+    "description": "This verifies a logged-in member can enter a custom exercise name, calculate calories burned, adjust the value manually, and save the workout entry.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Type a custom exercise name"
+      },
+      {
+        "type": "action",
+        "description": "Calculate the calories burned"
+      },
+      {
+        "type": "action",
+        "description": "Edit the calculated calorie value"
+      },
+      {
+        "type": "action",
+        "description": "Add the exercise to today's workout log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify today's custom workout entry is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the exercise calories are shown in the workout list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC019",
+    "title": "Review grouped meals in the log",
+    "description": "A logged-in member can open the meal log and review meals grouped by meal type for the day.",
+    "category": "Dashboard Overview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify grouped meal entries are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify today's meal history is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC020",
+    "title": "Upload a meal photo and add detected foods",
+    "description": "A logged-in user can upload a meal photo in the AI scanner, review detected foods, and add selected items to the log.",
+    "category": "AI Food Scanner",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the food scanner link"
+      },
+      {
+        "type": "action",
+        "description": "Upload a meal photo"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify detected food items are displayed"
+      },
+      {
+        "type": "action",
+        "description": "Select detected food items to add"
+      },
+      {
+        "type": "action",
+        "description": "Add the selected items to the log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the scanned foods are recorded in the meal log"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC021",
+    "title": "Validate password mismatch on registration",
+    "description": "A new user entering different passwords during registration sees a validation error and cannot create an account.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the name field with a new user name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with a new unique email"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the confirm password field with a different password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a password mismatch error is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC022",
+    "title": "Update profile preferences and save changes",
+    "description": "This verifies a self-service account owner can edit profile details, save them, and see the updated settings persist on the settings page.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Edit the profile name"
+      },
+      {
+        "type": "action",
+        "description": "Update the current weight"
+      },
+      {
+        "type": "action",
+        "description": "Change the goal"
+      },
+      {
+        "type": "action",
+        "description": "Change the diet type"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated profile settings are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved preferences remain on the page"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC023",
+    "title": "Recalculate onboarding targets after changing choices",
+    "description": "A user can go back in onboarding, change a goal or diet choice, and see the macro summary update before saving.",
+    "category": "Onboarding Wizard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Enter profile details across the wizard until the summary step"
+      },
+      {
+        "type": "action",
+        "description": "Go back to a previous step"
+      },
+      {
+        "type": "action",
+        "description": "Change the selected goal or diet type"
+      },
+      {
+        "type": "action",
+        "description": "Return to the summary step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the calculated macro summary is updated"
+      },
+      {
+        "type": "action",
+        "description": "Complete setup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved profile is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC024",
+    "title": "Update profile settings",
+    "description": "A logged-in member can change profile details and save them from settings.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Update a profile field"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated profile settings are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC025",
+    "title": "Delete a workout entry from today",
+    "description": "This verifies a logged-in member can remove an exercise from today's workout list and see it disappear from the tracker.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Add an exercise to today's workout log"
+      },
+      {
+        "type": "action",
+        "description": "Delete the exercise from today's list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the workout entry is removed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the today's workout list remains visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC026",
+    "title": "Generate and save a nutrition plan",
+    "description": "A logged-in user can generate a personalized nutrition plan, view the streamed result, and save it for later.",
+    "category": "AI Nutrition Plan Generator",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the nutrition plans link"
+      },
+      {
+        "type": "action",
+        "description": "Generate a nutrition plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the generated plan content is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Save the generated plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved plan appears in the saved plans list"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC027",
+    "title": "Review analytics charts on the main time range",
+    "description": "This verifies a logged-in member can open analytics and view weight, calorie, and macro trend charts for the default range.",
+    "category": "Analytics",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the weight history chart is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the calorie trend chart is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the macro distribution chart is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC028",
+    "title": "Switch analytics time ranges",
+    "description": "A logged-in member can switch between analytics time ranges and review updated progress charts.",
+    "category": "Analytics",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "action",
+        "description": "Select a different time range"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analytics charts update for the selected range"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC029",
+    "title": "Delete a workout entry",
+    "description": "A logged-in member can remove a workout entry and see the workout list update.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Delete a workout entry from the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the workout entry is removed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the exercise list updates"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC030",
+    "title": "Change the interface language and save it",
+    "description": "This verifies a self-service account owner can switch the interface language in settings and keep the selected language after saving.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the language setting"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the interface language changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected language remains active"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC031",
+    "title": "Change language and theme",
+    "description": "A logged-in member can change the app language and theme from settings and see the preferences take effect.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Change the language setting"
+      },
+      {
+        "type": "action",
+        "description": "Change the theme setting"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated language is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected theme is applied"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC032",
+    "title": "Expand and collapse a saved nutrition plan",
+    "description": "A logged-in user can open a saved nutrition plan to review details and then collapse it again.",
+    "category": "AI Nutrition Plan Generator",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the nutrition plans link"
+      },
+      {
+        "type": "action",
+        "description": "Expand a saved plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved plan details are displayed"
+      },
+      {
+        "type": "action",
+        "description": "Collapse the saved plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved plan details are hidden"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC033",
+    "title": "Switch analytics to a 7-day view",
+    "description": "This verifies a logged-in member can change the analytics range to 7 days and see the charts update to the shorter window.",
+    "category": "Analytics",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the analytics time range to 7 days"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the charts update to the 7-day range"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analytics charts remain visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC034",
+    "title": "Review saved nutrition plans",
+    "description": "A logged-in member can open the plans page and view previously saved plans.",
+    "category": "Nutrition Plans",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /plans"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify saved plans are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC035",
+    "title": "Change the interface theme and save it",
+    "description": "This verifies a self-service account owner can switch the visual theme in settings and keep the selected theme after saving.",
+    "category": "Settings",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the theme setting"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the interface theme changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected theme remains active"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC036",
+    "title": "Delete a saved nutrition plan",
+    "description": "A logged-in user can delete a saved nutrition plan and no longer see it in the saved plans list.",
+    "category": "AI Nutrition Plan Generator",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the nutrition plans link"
+      },
+      {
+        "type": "action",
+        "description": "Delete a saved plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved plan is removed from the list"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC037",
+    "title": "Use workout tracking after reopening the page",
+    "description": "A logged-in member can add a workout, refresh the browser, and confirm the local workout history remains visible in the same session.",
+    "category": "Workout Tracker",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /workout"
+      },
+      {
+        "type": "action",
+        "description": "Add a workout entry"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the workout entry remains visible"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC038",
+    "title": "View AI nutrition profile summary",
+    "description": "A logged-in user can open the nutrition plans page and review the profile summary used to generate recommendations.",
+    "category": "AI Nutrition Plan Generator",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the nutrition plans link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profile summary card is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC039",
+    "title": "View empty analytics states",
+    "description": "A logged-in member with no recent progress can open analytics and see empty or no-data guidance instead of broken charts.",
+    "category": "Analytics",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state message is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analytics charts are not broken"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC040",
+    "title": "Handle empty scan input",
+    "description": "A logged-in member who opens the scanner without selecting an image sees guidance to provide a photo before scanning.",
+    "category": "AI Food Scanner",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /scan"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to scan without adding an image"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an image required message is visible"
+      }
+    ],
+    "priority": "Low"
+  }
+]
