@@ -10,6 +10,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { calculateBMI, calculateDailyCalories } from '@/lib/utils'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
+import { isProUser, activatePro, deactivatePro, isAdmin } from '@/lib/limits'
 
 // ── Types ────────────────────────────────────────────────────────────
 interface FieldProps {
@@ -97,6 +98,38 @@ export default function SettingsPage() {
   const [deleteConfirmed, setDeleteConfirmed]     = useState(false)
   const [deleting, setDeleting]                   = useState(false)
   const [deleteError, setDeleteError]             = useState('')
+  // Pro state
+  const [userEmail, setUserEmail]   = useState<string | null>(null)
+  const [proActive, setProActive]   = useState(false)
+  const [proCode, setProCode]       = useState('')
+  const [proError, setProError]     = useState('')
+  const [proSuccess, setProSuccess] = useState(false)
+
+  // ── Pro ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      const email = data.user?.email ?? null
+      setUserEmail(email)
+      setProActive(isProUser(email))
+    })
+  }, [])
+
+  const handleActivatePro = () => {
+    setProError('')
+    if (activatePro(proCode)) {
+      setProActive(true)
+      setProSuccess(true)
+      setProCode('')
+      setTimeout(() => setProSuccess(false), 3000)
+    } else {
+      setProError(isEn ? 'Invalid activation code' : 'كود التفعيل غير صحيح')
+    }
+  }
+
+  const handleDeactivatePro = () => {
+    deactivatePro()
+    setProActive(false)
+  }
 
   // ── Auth actions ────────────────────────────────────────────────
   const handleLogout = async () => {
@@ -214,6 +247,12 @@ export default function SettingsPage() {
               BMI {bmi.value}
             </span>
             <span className="text-xs text-white/40">{dailyCal} {t('سعرة/يوم', 'kcal/day')}</span>
+            {proActive && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-black"
+                style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(251,191,36,0.15))', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.4)' }}>
+                ⭐ Pro
+              </span>
+            )}
           </div>
         </div>
         <Sparkles size={20} color="rgba(245,158,11,0.7)" className="flex-shrink-0" />
@@ -362,6 +401,112 @@ export default function SettingsPage() {
           <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" />
         </button>
       </SettingsSection>
+
+      {/* ── Galaxy Pro ── */}
+      {proActive ? (
+        /* ── Pro Active Card ── */
+        <div className="rounded-2xl p-5 flex flex-col gap-3 animate-fade-in"
+          style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06))', border: '1px solid rgba(245,158,11,0.35)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.3), rgba(251,191,36,0.15))' }}>
+                ⭐
+              </div>
+              <div>
+                <p className="font-black text-base" style={{ color: '#f59e0b' }}>Galaxy Pro</p>
+                <p className="text-xs text-white/50">
+                  {isAdmin(userEmail)
+                    ? t('مفعّل (حساب المشرف)', 'Active (Admin account)')
+                    : t('مفعّل', 'Active')}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+              style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}>
+              ✓ {t('نشط', 'Active')}
+            </span>
+          </div>
+
+          {/* Benefits */}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { icon: '📷', ar: 'تصوير غير محدود', en: 'Unlimited scans' },
+              { icon: '📋', ar: 'خطط غذائية غير محدودة', en: 'Unlimited plans' },
+              { icon: '⚡', ar: 'ذكاء اصطناعي كامل', en: 'Full AI access' },
+              { icon: '🚫', ar: 'بدون قيود', en: 'No limits' },
+            ].map(b => (
+              <div key={b.en} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{ background: 'rgba(245,158,11,0.07)' }}>
+                <span className="text-sm">{b.icon}</span>
+                <span className="text-xs text-white/70">{t(b.ar, b.en)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Deactivate (only for non-admin) */}
+          {!isAdmin(userEmail) && (
+            <button onClick={handleDeactivatePro}
+              className="text-xs text-center mt-1"
+              style={{ color: 'rgba(255,255,255,0.25)' }}>
+              {t('إلغاء التفعيل', 'Deactivate')}
+            </button>
+          )}
+        </div>
+      ) : (
+        /* ── Pro Activation Card ── */
+        <div className="rounded-2xl p-5 flex flex-col gap-4"
+          style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
+              style={{ background: 'rgba(245,158,11,0.1)' }}>
+              ⭐
+            </div>
+            <div>
+              <p className="font-black text-base text-white">Galaxy Pro</p>
+              <p className="text-xs text-white/40">{t('أدخل كود التفعيل', 'Enter activation code')}</p>
+            </div>
+          </div>
+
+          {/* Preview of Pro benefits */}
+          <div className="flex gap-2 flex-wrap">
+            {['📷 ∞', '📋 ∞', '⚡ AI', '🚫 قيود'].map(b => (
+              <span key={b} className="text-xs px-2.5 py-1 rounded-full"
+                style={{ background: 'rgba(245,158,11,0.08)', color: 'rgba(245,158,11,0.7)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                {b}
+              </span>
+            ))}
+          </div>
+
+          {/* Code input */}
+          <div className="flex gap-2">
+            <input
+              value={proCode}
+              onChange={e => { setProCode(e.target.value); setProError('') }}
+              onKeyDown={e => e.key === 'Enter' && handleActivatePro()}
+              placeholder={t('GALAXY-XXXX', 'GALAXY-XXXX')}
+              dir="ltr"
+              className="galaxy-input flex-1 px-3 py-2.5 text-sm font-mono"
+            />
+            <button
+              onClick={handleActivatePro}
+              disabled={!proCode.trim()}
+              className="px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-40 transition-all"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', color: '#09090D' }}>
+              {t('تفعيل', 'Activate')}
+            </button>
+          </div>
+
+          {proError && (
+            <p className="text-xs text-center" style={{ color: '#ef4444' }}>✗ {proError}</p>
+          )}
+          {proSuccess && (
+            <p className="text-xs text-center font-bold" style={{ color: '#10b981' }}>
+              ✅ {t('Galaxy Pro مفعّل! استمتع بالوصول الكامل', 'Galaxy Pro activated! Enjoy full access')}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Account ── */}
       <SettingsSection title={t('الحساب', 'Account')}>

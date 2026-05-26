@@ -1,9 +1,11 @@
-// ── Galaxy Nutrition — Freemium Limits ──────────────────────────────
+// ── Galaxy Nutrition — Freemium / Pro Limits ─────────────────────────
 //
-//  Free tier  : 5 AI scans / day  |  1 meal plan / week
-//  Admin      : unlimited everything (add your email to .env.local)
+//  Free tier  : 2 AI scans / day  |  1 meal plan / week
+//  Pro tier   : unlimited everything
+//  Admin      : also unlimited (add email to NEXT_PUBLIC_ADMIN_EMAILS)
 //
-//  .env.local → NEXT_PUBLIC_ADMIN_EMAILS=you@email.com,other@email.com
+//  Pro activation: user enters NEXT_PUBLIC_PRO_CODE in settings → stored
+//  in localStorage under 'galaxy-pro-active'.
 // ────────────────────────────────────────────────────────────────────
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
@@ -13,11 +15,35 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
 
 export const FREE_DAILY_SCANS  = 2
 export const FREE_WEEKLY_PLANS = 1
+const PRO_KEY = 'galaxy-pro-active'
 
 // ── Admin bypass ─────────────────────────────────────────────────────
 export function isAdmin(email?: string | null): boolean {
   if (!email) return false
   return ADMIN_EMAILS.includes(email.toLowerCase())
+}
+
+// ── Pro tier ─────────────────────────────────────────────────────────
+/** Returns true if user is admin OR has activated Pro locally */
+export function isProUser(email?: string | null): boolean {
+  if (isAdmin(email)) return true
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem(PRO_KEY) === 'true'
+}
+
+/** Validates `code` against NEXT_PUBLIC_PRO_CODE and activates Pro.
+ *  Returns true on success, false on wrong code or missing env var. */
+export function activatePro(code: string): boolean {
+  const validCode = process.env.NEXT_PUBLIC_PRO_CODE
+  if (!validCode) return false
+  if (code.trim() !== validCode.trim()) return false
+  localStorage.setItem(PRO_KEY, 'true')
+  return true
+}
+
+/** Removes the local Pro activation (admin bypass is not affected). */
+export function deactivatePro(): void {
+  if (typeof window !== 'undefined') localStorage.removeItem(PRO_KEY)
 }
 
 // ── Scan limits ───────────────────────────────────────────────────────
@@ -45,12 +71,12 @@ export function incrementScanCount(): void {
 }
 
 export function canScan(email?: string | null): boolean {
-  return isAdmin(email) || getTodayScanCount() < FREE_DAILY_SCANS
+  return isProUser(email) || getTodayScanCount() < FREE_DAILY_SCANS
 }
 
-/** Returns '∞' for admin, otherwise the number of scans left today */
+/** Returns '∞' for Pro/admin, otherwise the number of scans left today */
 export function remainingScans(email?: string | null): number | '∞' {
-  if (isAdmin(email)) return '∞'
+  if (isProUser(email)) return '∞'
   return Math.max(0, FREE_DAILY_SCANS - getTodayScanCount())
 }
 
@@ -67,7 +93,7 @@ export function recordPlanGenerated(): void {
 }
 
 export function canGeneratePlan(email?: string | null): boolean {
-  if (isAdmin(email)) return true
+  if (isProUser(email)) return true
   const last = getLastPlanDate()
   if (!last) return true
   const diffDays = Math.floor(
@@ -78,7 +104,7 @@ export function canGeneratePlan(email?: string | null): boolean {
 
 /** Days remaining until the next free plan (0 if available now) */
 export function daysUntilNextPlan(email?: string | null): number {
-  if (isAdmin(email)) return 0
+  if (isProUser(email)) return 0
   const last = getLastPlanDate()
   if (!last) return 0
   const diffDays = Math.floor(
