@@ -31,12 +31,15 @@ export function isProUser(email?: string | null): boolean {
   return localStorage.getItem(PRO_KEY) === 'true'
 }
 
-/** Validates `code` against NEXT_PUBLIC_PRO_CODE and activates Pro.
- *  Returns true on success, false on wrong code or missing env var. */
+// Default built-in code — always works without any env var.
+// Override by setting NEXT_PUBLIC_PRO_CODE in Vercel if you want a custom code.
+const DEFAULT_PRO_CODE = 'GALAXY-PRO-2025'
+
+/** Validates `code` and activates Pro in localStorage.
+ *  Accepts NEXT_PUBLIC_PRO_CODE if set, otherwise falls back to DEFAULT_PRO_CODE. */
 export function activatePro(code: string): boolean {
-  const validCode = process.env.NEXT_PUBLIC_PRO_CODE
-  if (!validCode) return false
-  if (code.trim() !== validCode.trim()) return false
+  const validCode = process.env.NEXT_PUBLIC_PRO_CODE ?? DEFAULT_PRO_CODE
+  if (code.trim().toUpperCase() !== validCode.trim().toUpperCase()) return false
   localStorage.setItem(PRO_KEY, 'true')
   return true
 }

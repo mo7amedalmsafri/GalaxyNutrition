@@ -484,7 +484,7 @@ export default function SettingsPage() {
               value={proCode}
               onChange={e => { setProCode(e.target.value); setProError('') }}
               onKeyDown={e => e.key === 'Enter' && handleActivatePro()}
-              placeholder={t('GALAXY-XXXX', 'GALAXY-XXXX')}
+              placeholder={t('أدخل الكود هنا', 'Enter code here')}
               dir="ltr"
               className="galaxy-input flex-1 px-3 py-2.5 text-sm font-mono"
             />
