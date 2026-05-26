@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import BottomNav from './BottomNav'
 
-const NO_NAV = ['/login', '/register', '/onboarding', '/auth']
+const NO_NAV = ['/login', '/register', '/onboarding', '/auth', '/reset-password']
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

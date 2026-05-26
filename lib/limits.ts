@@ -11,7 +11,7 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean)
 
-export const FREE_DAILY_SCANS  = 5
+export const FREE_DAILY_SCANS  = 2
 export const FREE_WEEKLY_PLANS = 1
 
 // ── Admin bypass ─────────────────────────────────────────────────────
