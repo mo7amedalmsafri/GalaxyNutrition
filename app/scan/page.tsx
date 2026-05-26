@@ -1,18 +1,28 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Camera, Upload, Loader2, CheckCircle, X, Plus, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import { DetectedFood, FoodItem } from '@/lib/types'
 import { addFoodLog } from '@/lib/db'
 import { getTodayDate } from '@/lib/utils'
 import { useT } from '@/lib/store'
+import { createClient } from '@/lib/supabase/client'
+import { canScan, remainingScans, incrementScanCount, FREE_DAILY_SCANS } from '@/lib/limits'
 
 type ScanState = 'idle' | 'preview' | 'analyzing' | 'results' | 'error'
 
 export default function ScanPage() {
   const t = useT()
   const [state, setState] = useState<ScanState>('idle')
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [showLimitModal, setShowLimitModal] = useState(false)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null)
+    })
+  }, [])
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageBase64, setImageBase64] = useState<string | null>(null)
   const [imageMime, setImageMime] = useState<string>('image/jpeg')
@@ -39,6 +49,13 @@ export default function ScanPage() {
 
   const analyzeImage = async () => {
     if (!imageBase64) return
+
+    // ── Limit check ──
+    if (!canScan(userEmail)) {
+      setShowLimitModal(true)
+      return
+    }
+
     setState('analyzing')
     try {
       const res = await fetch('/api/analyze-food', {
@@ -48,6 +65,7 @@ export default function ScanPage() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'فشل التحليل')
+      incrementScanCount()   // سجّل الاستخدام بعد النجاح فقط
       setDetectedFoods(data.detectedFoods || [])
       setMealDescription(data.mealDescription || '')
       setState('results')
@@ -109,10 +127,22 @@ export default function ScanPage() {
     <div className="flex flex-col px-4 pt-6 gap-5">
       {/* Header */}
       <div className="animate-fade-in">
-        <h1 className="text-2xl font-black text-white">
-          <span className="text-gradient-galaxy">{t('تحليل', 'Analyze')}</span> {t('الوجبة', 'Meal')}
-        </h1>
-        <p className="text-white/40 text-sm mt-1">{t('صوّر وجبتك ودع الذكاء الاصطناعي يحللها', 'Snap your meal and let AI analyze it')}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-white">
+              <span className="text-gradient-galaxy">{t('تحليل', 'Analyze')}</span> {t('الوجبة', 'Meal')}
+            </h1>
+            <p className="text-white/40 text-sm mt-1">{t('صوّر وجبتك ودع الذكاء الاصطناعي يحللها', 'Snap your meal and let AI analyze it')}</p>
+          </div>
+          {/* شارة التحليلات المتبقية */}
+          <div className="flex flex-col items-center px-3 py-2 rounded-2xl flex-shrink-0"
+            style={{ background: 'rgba(107,33,168,0.15)', border: '1px solid rgba(107,33,168,0.3)' }}>
+            <span className="text-lg font-black" style={{ color: '#c084fc' }}>
+              {remainingScans(userEmail)}
+            </span>
+            <span className="text-[10px] text-white/40">{t('متبقي', 'left')}</span>
+          </div>
+        </div>
       </div>
 
       {/* Idle State */}
@@ -359,6 +389,57 @@ export default function ScanPage() {
         onChange={e => e.target.files?.[0] && processImage(e.target.files[0])} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={e => e.target.files?.[0] && processImage(e.target.files[0])} />
+
+      {/* ── Limit Modal ── */}
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-5"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4 animate-slide-up"
+            style={{ background: '#0f0f18', border: '1px solid rgba(151,227,37,0.25)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center text-4xl"
+                style={{ background: 'rgba(107,33,168,0.15)' }}>
+                📷
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white">
+                  {t('وصلت الحد اليومي', 'Daily Limit Reached')}
+                </h3>
+                <p className="text-white/50 text-sm mt-1">
+                  {t(`استخدمت ${FREE_DAILY_SCANS}/${FREE_DAILY_SCANS} تحليلات اليوم`,
+                     `You've used ${FREE_DAILY_SCANS}/${FREE_DAILY_SCANS} free scans today`)}
+                </p>
+                <p className="text-white/30 text-xs mt-1">
+                  {t('يتجدد الحد غداً تلقائياً', 'Limit resets tomorrow automatically')}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl text-center"
+              style={{ background: 'rgba(151,227,37,0.07)', border: '1px solid rgba(151,227,37,0.15)' }}>
+              <p className="text-xs text-white/50 mb-1">{t('مع Galaxy Pro', 'With Galaxy Pro')}</p>
+              <p className="text-sm font-bold" style={{ color: '#97E325' }}>
+                {t('📷 تحليل صور غير محدود', '📷 Unlimited AI scans')}
+              </p>
+            </div>
+
+            <button
+              className="w-full py-3.5 rounded-2xl font-black text-white"
+              style={{ background: 'linear-gradient(135deg, #97E325, #00D4FF)' }}
+              onClick={() => setShowLimitModal(false)}
+            >
+              ⭐ {t('ترقّ إلى Galaxy Pro', 'Upgrade to Galaxy Pro')}
+            </button>
+            <button
+              onClick={() => setShowLimitModal(false)}
+              className="text-sm text-center"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+            >
+              {t('ليس الآن', 'Not now')}
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )

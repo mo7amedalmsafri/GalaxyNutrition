@@ -5,6 +5,8 @@ import { Sparkles, Trash2, ChevronDown, ChevronUp, BarChart3, X, RefreshCw } fro
 import GlassCard from '@/components/GlassCard'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { savePlan, getPlans, deletePlan, WorkoutPlan } from '@/lib/db'
+import { createClient } from '@/lib/supabase/client'
+import { canGeneratePlan, daysUntilNextPlan, recordPlanGenerated } from '@/lib/limits'
 
 const GOAL_LABELS: Record<string, { ar: string; en: string; color: string }> = {
   lose:     { ar: 'إنقاص الوزن',      en: 'Weight Loss',     color: '#06b6d4' },
@@ -48,9 +50,18 @@ export default function PlansPage() {
   const [plans,      setPlans]      = useState<WorkoutPlan[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
+  // freemium
+  const [userEmail,        setUserEmail]        = useState<string | null>(null)
+  const [showPlanLimitMsg, setShowPlanLimitMsg] = useState(false)
+
   const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { getPlans().then(setPlans) }, [])
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) =>
+      setUserEmail(data.user?.email ?? null)
+    )
+  }, [])
   useEffect(() => {
     textRef.current?.scrollTo({ top: textRef.current.scrollHeight, behavior: 'smooth' })
   }, [planText])
@@ -70,6 +81,12 @@ export default function PlansPage() {
 
   // ── Generate ──────────────────────────────────────────────────────────────
   const generate = async () => {
+    // ── Limit check ──
+    if (!canGeneratePlan(userEmail)) {
+      setShowPlanLimitMsg(true)
+      return
+    }
+    setShowPlanLimitMsg(false)
     setPlanText(''); setError(''); setMacros(null); setMacrosError('')
     setStreaming(true)
     try {
@@ -107,6 +124,7 @@ export default function PlansPage() {
         plan_content: full,
       })
       if (saved) setPlans(prev => [saved, ...prev])
+      recordPlanGenerated()   // سجّل التاريخ بعد النجاح
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('حدث خطأ غير متوقع', 'Unexpected error'))
     } finally { setStreaming(false) }
@@ -184,17 +202,57 @@ export default function PlansPage() {
         </p>
       </div>
 
+      {/* ── Weekly plan limit banner ── */}
+      {showPlanLimitMsg && (
+        <div
+          className="p-4 rounded-2xl flex flex-col gap-2 animate-fade-in"
+          style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.28)' }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⏳</span>
+            <p className="font-bold text-sm" style={{ color: '#f59e0b' }}>
+              {t('وصلت للحد الأسبوعي', 'Weekly limit reached')}
+            </p>
+          </div>
+          <p className="text-xs text-white/55 leading-relaxed">
+            {t(
+              `يمكنك توليد خطة واحدة كل أسبوع مجاناً. يمكنك توليد خطة جديدة بعد ${daysUntilNextPlan(userEmail)} ${daysUntilNextPlan(userEmail) === 1 ? 'يوم' : 'أيام'}.`,
+              `You can generate one plan per week for free. Next plan available in ${daysUntilNextPlan(userEmail)} ${daysUntilNextPlan(userEmail) === 1 ? 'day' : 'days'}.`
+            )}
+          </p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(245,158,11,0.15)' }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  background: '#f59e0b',
+                  width: `${Math.min(100, ((7 - daysUntilNextPlan(userEmail)) / 7) * 100)}%`,
+                }}
+              />
+            </div>
+            <span className="text-[10px] font-bold" style={{ color: '#f59e0b' }}>
+              {7 - daysUntilNextPlan(userEmail)}/7 {t('أيام', 'days')}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ── Generate button ── */}
       <button
         onClick={generate}
-        disabled={streaming}
+        disabled={streaming || showPlanLimitMsg}
         className="btn-galaxy py-4 flex items-center justify-center gap-2 text-base font-black"
-        style={{ opacity: streaming ? 0.7 : 1 }}
+        style={{ opacity: (streaming || showPlanLimitMsg) ? 0.45 : 1 }}
       >
         {streaming ? (
           <>
             <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
             {t('جاري التوليد...', 'Generating...')}
+          </>
+        ) : showPlanLimitMsg ? (
+          <>
+            <span>⏳</span>
+            {t(`بعد ${daysUntilNextPlan(userEmail)} أيام`, `In ${daysUntilNextPlan(userEmail)} days`)}
           </>
         ) : (
           <>
