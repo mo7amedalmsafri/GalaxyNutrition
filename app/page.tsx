@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Droplets, Activity, Trash2 } from 'lucide-react'
+import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import BMICircle from '@/components/BMICircle'
 import CalorieRing from '@/components/CalorieRing'
@@ -62,12 +62,14 @@ export default function Dashboard() {
   const t = useT()
   const today = getTodayDate()
 
-  const [profile, , profileHydrated] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
-  const lang = profile.language ?? 'ar'
+  const [profile, setProfile, profileHydrated] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
+  const lang    = profile.language ?? 'ar'
+  const isLight = (profile.theme ?? 'dark') === 'light'
   const [todayFoods, setTodayFoods] = useState<FoodItem[]>([])
   const [waterMl, setWaterMlState] = useState(0)
   const [weightHistory, setWeightHistory] = useState(WEIGHT_HISTORY_FALLBACK)
   const [showFoodModal, setShowFoodModal] = useState(false)
+  const [showDrawer,    setShowDrawer]    = useState(false)
   const [waterInput, setWaterInput] = useState('')
   const [showWeightInput, setShowWeightInput] = useState(false)
   const [weightInput, setWeightInput] = useState('')
@@ -150,6 +152,39 @@ export default function Dashboard() {
     setSavingWeight(false)
   }
 
+  // ── Drawer settings handlers ─────────────────────────────────────
+  const handleThemeToggle = () => {
+    const next = (profile.theme ?? 'dark') === 'light' ? 'dark' : 'light'
+    setProfile({ ...profile, theme: next as 'dark' | 'light' })
+    document.documentElement.setAttribute('data-theme', next)
+  }
+
+  const handleLanguageToggle = () => {
+    const next = (profile.language ?? 'ar') === 'ar' ? 'en' : 'ar'
+    setProfile({ ...profile, language: next as 'ar' | 'en' })
+    document.documentElement.setAttribute('lang', next)
+    document.documentElement.setAttribute('dir', next === 'en' ? 'ltr' : 'rtl')
+    setTimeout(() => window.location.reload(), 150)
+  }
+
+  const handleNotificationsToggle = async () => {
+    if (profile.notifications) {
+      setProfile({ ...profile, notifications: false })
+      return
+    }
+    if (!('Notification' in window)) return
+    const permission = await Notification.requestPermission()
+    if (permission === 'granted') {
+      setProfile({ ...profile, notifications: true })
+      new Notification('Galaxy Nutrition 🚀', {
+        body: profile.language === 'en'
+          ? 'Notifications enabled!'
+          : 'الإشعارات مفعّلة!',
+        icon: '/icon-192.png',
+      })
+    }
+  }
+
   return (
     <div className="flex flex-col px-4 pt-6 gap-5" style={{ direction: lang === 'en' ? 'ltr' : 'rtl' }}>
 
@@ -164,11 +199,15 @@ export default function Dashboard() {
           </h1>
         </div>
         <button
-          onClick={() => router.push('/settings')}
-          className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-base"
-          style={{ background: 'linear-gradient(135deg, #97E325, #00D4FF)' }}
+          onClick={() => setShowDrawer(true)}
+          className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
+          style={{
+            background: isLight ? '#ffffff' : 'rgba(255,255,255,0.07)',
+            border:     isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.12)',
+            boxShadow:  isLight ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
+          }}
         >
-          {profile.name?.[0] ?? '؟'}
+          <Menu size={20} color={isLight ? 'rgba(30,30,50,0.65)' : 'rgba(255,255,255,0.75)'} />
         </button>
       </div>
 
@@ -450,6 +489,189 @@ export default function Dashboard() {
       {showFoodModal && (
         <FoodEntryModal onSave={handleAddFood} onClose={() => setShowFoodModal(false)} />
       )}
+
+      {/* ── Side Drawer Backdrop ── */}
+      <div
+        className="fixed inset-0 z-40 transition-all duration-300"
+        onClick={() => setShowDrawer(false)}
+        style={{
+          background:    'rgba(0,0,0,0.55)',
+          backdropFilter: showDrawer ? 'blur(4px)' : 'none',
+          opacity:        showDrawer ? 1 : 0,
+          pointerEvents:  showDrawer ? 'all' : 'none',
+        }}
+      />
+
+      {/* ── Side Drawer Panel ── */}
+      <aside
+        className="fixed top-0 left-0 h-full z-50 flex flex-col transition-transform duration-300 ease-out"
+        style={{
+          width:       '272px',
+          transform:   showDrawer ? 'translateX(0)' : 'translateX(-100%)',
+          background:  isLight ? '#ffffff' : 'linear-gradient(160deg, #111128 0%, #0a0016 100%)',
+          borderRight: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(151,227,37,0.15)',
+          boxShadow:   isLight ? '12px 0 40px rgba(0,0,0,0.12)' : '12px 0 48px rgba(0,0,0,0.6)',
+        }}
+      >
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-5 pt-14 pb-4">
+          <span className="text-base font-black text-gradient-galaxy tracking-wide">
+            Galaxy Nutrition
+          </span>
+          <button
+            onClick={() => setShowDrawer(false)}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+            style={{ background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)' }}
+          >
+            <X size={16} color={isLight ? 'rgba(20,20,40,0.55)' : 'rgba(255,255,255,0.6)'} />
+          </button>
+        </div>
+
+        {/* ── Profile Card ── */}
+        <div className="px-4 pb-4">
+          <button
+            onClick={() => { router.push('/settings'); setShowDrawer(false) }}
+            className="w-full text-start p-4 rounded-2xl transition-all active:scale-[0.98]"
+            style={{ background: isLight
+              ? 'linear-gradient(135deg, rgba(151,227,37,0.1), rgba(0,212,255,0.07))'
+              : 'linear-gradient(135deg, rgba(151,227,37,0.1), rgba(0,212,255,0.07))',
+              border: isLight ? '1px solid rgba(0,0,0,0.06)' : 'none',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #97E325, #00D4FF)' }}
+              >
+                {profile.gender === 'female' ? '👩' : '👨'}
+              </div>
+              <div className="min-w-0">
+                <p className="font-black truncate"
+                  style={{ color: isLight ? '#0f0f1e' : '#ffffff' }}>
+                  {profile.name}
+                </p>
+                <p className="text-xs"
+                  style={{ color: isLight ? 'rgba(15,15,35,0.45)' : 'rgba(255,255,255,0.45)' }}>
+                  {profile.age} {t('سنة', 'yr')} · {profile.weight}{t('كغ', 'kg')} · {profile.height}{t('سم', 'cm')}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: t('الهدف','Goal'),  val: `${profile.dailyCalories.toLocaleString()}`, sub: t('سعرة','cal'), color: '#97E325' },
+                { label: t('الماء','Water'), val: `${(waterMl/1000).toFixed(1)}`,              sub: 'L',            color: '#06b6d4' },
+                { label: 'BMI',              val: `${bmi.value}`,                              sub: '',             color: bmi.color },
+              ].map(s => (
+                <div key={s.label} className="flex flex-col p-2 rounded-xl"
+                  style={{ background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)' }}>
+                  <span className="text-[10px] mb-0.5"
+                    style={{ color: isLight ? 'rgba(15,15,35,0.4)' : 'rgba(255,255,255,0.4)' }}>
+                    {s.label}
+                  </span>
+                  <span className="text-xs font-bold" style={{ color: s.color }}>
+                    {s.val}
+                    {s.sub && (
+                      <span className="text-[9px] font-normal"
+                        style={{ color: isLight ? 'rgba(15,15,35,0.35)' : 'rgba(255,255,255,0.35)' }}>
+                        {' '}{s.sub}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="mx-4 mb-2"
+          style={{ height: '1px', background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)' }} />
+
+        {/* ── Settings ── */}
+        <div className="flex flex-col px-3 flex-1 overflow-y-auto pb-2">
+          <p className="text-[10px] uppercase tracking-widest px-3 pt-3 pb-2"
+            style={{ color: isLight ? 'rgba(15,15,35,0.3)' : 'rgba(255,255,255,0.28)' }}>
+            {t('الإعدادات', 'Settings')}
+          </p>
+
+          {/* Notifications */}
+          <button onClick={handleNotificationsToggle}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
+            <Bell size={17} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />
+            <span className="text-sm flex-1 text-start"
+              style={{ color: isLight ? 'rgba(15,15,35,0.82)' : 'rgba(255,255,255,0.82)' }}>
+              {t('الإشعارات', 'Notifications')}
+            </span>
+            <div className={`toggle-track ${profile.notifications ? 'toggle-on' : ''}`}
+              style={{ background: profile.notifications ? 'rgba(151,227,37,0.85)' : isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)' }}>
+              <div className="toggle-thumb" />
+            </div>
+          </button>
+
+          {/* Theme */}
+          <button onClick={handleThemeToggle}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
+            {isLight
+              ? <Sun  size={17} color="rgba(245,158,11,0.9)" className="flex-shrink-0" />
+              : <Moon size={17} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />}
+            <span className="text-sm flex-1 text-start"
+              style={{ color: isLight ? 'rgba(15,15,35,0.82)' : 'rgba(255,255,255,0.82)' }}>
+              {isLight ? t('الوضع الفاتح', 'Light Mode') : t('الوضع الداكن', 'Dark Mode')}
+            </span>
+            <div className={`toggle-track ${isLight ? 'toggle-on' : ''}`}
+              style={{ background: isLight ? 'rgba(245,158,11,0.85)' : 'rgba(255,255,255,0.15)' }}>
+              <div className="toggle-thumb" />
+            </div>
+          </button>
+
+          {/* Language */}
+          <button onClick={handleLanguageToggle}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
+            <Languages size={17} color="rgba(0,212,255,0.8)" className="flex-shrink-0" />
+            <span className="text-sm flex-1 text-start"
+              style={{ color: isLight ? 'rgba(15,15,35,0.82)' : 'rgba(255,255,255,0.82)' }}>
+              {(profile.language ?? 'ar') === 'ar' ? '🇸🇦 العربية' : '🇺🇸 English'}
+            </span>
+            <div className={`toggle-track ${(profile.language ?? 'ar') === 'en' ? 'toggle-on' : ''}`}
+              style={{ background: (profile.language ?? 'ar') === 'en' ? 'rgba(0,212,255,0.85)' : isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)' }}>
+              <div className="toggle-thumb" />
+            </div>
+          </button>
+
+          {/* About */}
+          <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
+            <Info size={17} color="rgba(151,227,37,0.55)" className="flex-shrink-0" />
+            <span className="text-sm flex-1 text-start"
+              style={{ color: isLight ? 'rgba(15,15,35,0.65)' : 'rgba(255,255,255,0.65)' }}>
+              {t('حول التطبيق', 'About')}
+            </span>
+            <span style={{ fontSize: '11px', color: isLight ? 'rgba(15,15,35,0.28)' : 'rgba(255,255,255,0.28)' }}>
+              v1.0.0
+            </span>
+          </button>
+
+          {/* Full profile */}
+          <div className="mt-2">
+            <button
+              onClick={() => { router.push('/settings'); setShowDrawer(false) }}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all active:scale-[0.97]"
+              style={{ background: 'rgba(151,227,37,0.09)', border: '1px solid rgba(151,227,37,0.2)' }}>
+              <User size={17} color="rgba(151,227,37,0.8)" className="flex-shrink-0" />
+              <span className="text-sm font-semibold flex-1 text-start"
+                style={{ color: 'rgba(151,227,37,0.9)' }}>
+                {t('الملف الشخصي الكامل', 'Full Profile')}
+              </span>
+              <span style={{ color: 'rgba(151,227,37,0.45)', fontSize: '16px' }}>›</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center pb-10"
+          style={{ fontSize: '11px', color: isLight ? 'rgba(15,15,35,0.2)' : 'rgba(255,255,255,0.18)' }}>
+          Galaxy Nutrition v1.0 ✨
+        </p>
+      </aside>
     </div>
   )
 }

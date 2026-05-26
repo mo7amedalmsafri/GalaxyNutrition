@@ -83,6 +83,36 @@ export async function deleteFoodLog(id: string): Promise<void> {
   await supabase.from('food_logs').delete().eq('id', id)
 }
 
+export async function updateFoodLog(
+  id: string,
+  item: Omit<FoodItem, 'id' | 'loggedAt'>
+): Promise<FoodItem | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('food_logs')
+    .update({
+      name:            item.name,
+      quantity:        item.quantity,
+      unit:            item.unit,
+      meal_type:       item.mealType,
+      calories:        item.nutrition.calories,
+      protein:         item.nutrition.protein,
+      carbs:           item.nutrition.carbs,
+      fat:             item.nutrition.fat,
+      fiber:           item.nutrition.fiber        ?? 0,
+      sugars:          item.nutrition.sugars       ?? 0,
+      saturated_fat:   item.nutrition.saturatedFat ?? 0,
+      unsaturated_fat: item.nutrition.unsaturatedFat ?? 0,
+      sodium:          item.nutrition.sodium       ?? 0,
+      potassium:       item.nutrition.potassium    ?? 0,
+    })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error || !data) return null
+  return rowToFoodItem(data)
+}
+
 // ── Weight Entries ────────────────────────────────────────────────────
 
 export async function getWeightEntries() {

@@ -9,6 +9,8 @@ import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/sto
 interface FoodEntryModalProps {
   initialName?: string
   initialNutrition?: Partial<NutritionData>
+  initialQuantity?: number
+  initialMealType?: FoodItem['mealType']
   onSave: (item: Omit<FoodItem, 'id' | 'loggedAt'>) => void
   onClose: () => void
 }
@@ -59,6 +61,8 @@ function NutritionField({
 export default function FoodEntryModal({
   initialName = '',
   initialNutrition,
+  initialQuantity,
+  initialMealType,
   onSave,
   onClose,
 }: FoodEntryModalProps) {
@@ -96,8 +100,8 @@ export default function FoodEntryModal({
   const microsBdr  = L ? 'rgba(0,0,0,0.09)'        : 'rgba(255,255,255,0.08)'
 
   const [name, setName] = useState(initialName)
-  const [quantity, setQuantity] = useState(100)
-  const [mealType, setMealType] = useState<FoodItem['mealType']>('lunch')
+  const [quantity, setQuantity] = useState(initialQuantity ?? 100)
+  const [mealType, setMealType] = useState<FoodItem['mealType']>(initialMealType ?? 'lunch')
   const [showMicros, setShowMicros] = useState(false)
   const [nutrition, setNutrition] = useState<NutritionData>({
     calories: initialNutrition?.calories ?? 0,
