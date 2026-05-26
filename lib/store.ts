@@ -81,3 +81,9 @@ export function useT() {
   const lang = profile.language ?? 'ar'
   return (ar: string, en: string) => lang === 'en' ? en : ar
 }
+
+/** Returns the current UI language: 'ar' or 'en'. */
+export function useLang(): 'ar' | 'en' {
+  const [profile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
+  return (profile.language ?? 'ar') as 'ar' | 'en'
+}

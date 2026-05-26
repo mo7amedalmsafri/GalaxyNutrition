@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { foodName, estimatedWeight } = await req.json()
+    const { foodName, estimatedWeight, language = 'ar' } = await req.json()
 
     if (!foodName) {
       return NextResponse.json({ error: 'اسم الطعام مطلوب' }, { status: 400 })
@@ -14,8 +14,10 @@ export async function POST(req: NextRequest) {
     }
 
     const weight = estimatedWeight || 100
+    const isAr = language === 'ar'
 
-    const prompt = `أنت خبير تغذية متخصص. احسب القيم الغذائية الدقيقة لـ "${foodName}" بوزن ${weight} جرام.
+    const prompt = isAr
+      ? `أنت خبير تغذية متخصص. احسب القيم الغذائية الدقيقة لـ "${foodName}" بوزن ${weight} جرام.
 
 أعطني النتيجة بهذا التنسيق بالضبط (JSON فقط، لا نص إضافي):
 {
@@ -35,8 +37,29 @@ export async function POST(req: NextRequest) {
   }
 }
 
-القيم الغذائية يجب أن تكون للكمية الكاملة (${weight} جرام) وليس لكل 100 جرام.
-استخدم قواعد بيانات التغذية الموثوقة (USDA وما شابهها).`
+القيم الغذائية للكمية الكاملة (${weight} جرام). استخدم USDA.`
+
+      : `You are a specialist nutrition expert. Calculate the exact nutrition values for "${foodName}" weighing ${weight} grams.
+
+Return exactly this format (JSON only, no extra text):
+{
+  "nameAr": "${foodName}",
+  "name": "food name in English",
+  "nutrition": {
+    "calories": 200,
+    "protein": 15,
+    "carbs": 25,
+    "fiber": 3,
+    "sugars": 5,
+    "fat": 8,
+    "saturatedFat": 2,
+    "unsaturatedFat": 6,
+    "sodium": 300,
+    "potassium": 400
+  }
+}
+
+Values are for the full ${weight}g amount. Use USDA database.`
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',

@@ -6,14 +6,15 @@ import GlassCard from '@/components/GlassCard'
 import { DetectedFood, FoodItem } from '@/lib/types'
 import { addFoodLog } from '@/lib/db'
 import { getTodayDate } from '@/lib/utils'
-import { useT } from '@/lib/store'
+import { useT, useLang } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
 import { canScan, remainingScans, incrementScanCount, FREE_DAILY_SCANS } from '@/lib/limits'
 
 type ScanState = 'idle' | 'preview' | 'analyzing' | 'results' | 'error'
 
 export default function ScanPage() {
-  const t = useT()
+  const t    = useT()
+  const lang = useLang()
   const [state, setState] = useState<ScanState>('idle')
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [showLimitModal, setShowLimitModal] = useState(false)
@@ -82,7 +83,7 @@ export default function ScanPage() {
       const res = await fetch('/api/recalculate-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ foodName: newName, estimatedWeight: food.estimatedWeight }),
+        body: JSON.stringify({ foodName: newName, estimatedWeight: food.estimatedWeight, language: lang }),
       })
       const data = await res.json()
       if (data.success) {
@@ -111,13 +112,13 @@ export default function ScanPage() {
       const res = await fetch('/api/recalculate-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ foodName: newDesc, estimatedWeight: totalWeight || 100 }),
+        body: JSON.stringify({ foodName: newDesc, estimatedWeight: totalWeight || 100, language: lang }),
       })
       const data = await res.json()
       if (data.success) {
         setDetectedFoods([{
-          name:            data.name    || newDesc,
-          nameAr:          data.nameAr  || newDesc,
+          name:   data.name   || newDesc,
+          nameAr: data.nameAr || (lang === 'ar' ? newDesc : data.name || newDesc),
           estimatedWeight: totalWeight  || 100,
           confidence:      1,
           nutrition: {
@@ -154,7 +155,7 @@ export default function ScanPage() {
       const res = await fetch('/api/analyze-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64, mimeType: imageMime }),
+        body: JSON.stringify({ imageBase64, mimeType: imageMime, language: lang }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'فشل التحليل')
@@ -537,14 +538,16 @@ export default function ScanPage() {
                               </>
                             ) : (
                               <>
-                                <h3 className="font-bold text-white text-sm truncate">{food.nameAr || food.name}</h3>
+                                <h3 className="font-bold text-white text-sm truncate">
+                                  {lang === 'en' ? (food.name || food.nameAr) : (food.nameAr || food.name)}
+                                </h3>
                                 <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
                                   style={{ background: 'rgba(107,33,168,0.2)', color: '#c084fc' }}>
                                   ~{food.estimatedWeight}{t('جم', 'g')}
                                 </span>
                                 {/* زر تعديل الاسم */}
                                 <button
-                                  onClick={() => setEditingName({ index: i, value: food.nameAr || food.name })}
+                                  onClick={() => setEditingName({ index: i, value: lang === 'en' ? (food.name || food.nameAr) : (food.nameAr || food.name) })}
                                   className="p-1.5 rounded-lg flex-shrink-0"
                                   style={{ background: 'rgba(192,132,252,0.12)', opacity: 0.7 }}
                                   title={t('تعديل الاسم وإعادة الحساب', 'Edit name & recalculate')}>
