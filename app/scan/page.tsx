@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Camera, Upload, Loader2, CheckCircle, X, Plus, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { Camera, Upload, Loader2, CheckCircle, X, Plus, ChevronRight, ChevronDown, ChevronUp, Pencil, Check } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import { DetectedFood, FoodItem } from '@/lib/types'
 import { addFoodLog } from '@/lib/db'
@@ -31,6 +31,12 @@ export default function ScanPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [mealAdded, setMealAdded] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [editingName, setEditingName] = useState<{ index: number; value: string } | null>(null)
+  const [recalculating, setRecalculating] = useState<number | null>(null)
+  const [editingNutrition, setEditingNutrition] = useState<{
+    index: number; field: 'calories' | 'protein' | 'carbs' | 'fat'; value: string
+  } | null>(null)
+
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
@@ -46,6 +52,43 @@ export default function ScanPage() {
     }
     reader.readAsDataURL(file)
   }, [])
+
+  // تعديل قيمة غذائية يدوياً
+  const updateFoodNutrition = (index: number, field: 'calories' | 'protein' | 'carbs' | 'fat', value: number) => {
+    setDetectedFoods(foods => foods.map((f, i) =>
+      i === index ? { ...f, nutrition: { ...f.nutrition, [field]: value } } : f
+    ))
+  }
+
+  // تأكيد تعديل اسم الوجبة → إعادة الحساب بالذكاء الاصطناعي
+  const handleNameConfirm = async (index: number) => {
+    if (!editingName || editingName.index !== index) return
+    const newName = editingName.value.trim()
+    if (!newName) { setEditingName(null); return }
+
+    setEditingName(null)
+    setRecalculating(index)
+
+    try {
+      const food = detectedFoods[index]
+      const res = await fetch('/api/recalculate-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foodName: newName, estimatedWeight: food.estimatedWeight }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDetectedFoods(foods => foods.map((f, i) =>
+          i === index
+            ? { ...f, name: data.name || newName, nameAr: data.nameAr || newName, nutrition: { ...f.nutrition, ...data.nutrition } }
+            : f
+        ))
+      }
+    } catch (err) {
+      console.error('recalculate-food error:', err)
+    }
+    setRecalculating(null)
+  }
 
   const analyzeImage = async () => {
     if (!imageBase64) return
@@ -121,6 +164,9 @@ export default function ScanPage() {
     setMealAdded(false)
     setShowDetails(false)
     setErrorMsg('')
+    setEditingName(null)
+    setRecalculating(null)
+    setEditingNutrition(null)
   }
 
   return (
@@ -329,33 +375,158 @@ export default function ScanPage() {
           {/* ── قائمة المكوّنات (تظهر عند الضغط) ── */}
           {showDetails && (
             <div className="flex flex-col gap-2 animate-fade-in">
-              {detectedFoods.map((food, i) => (
-                <GlassCard key={i} glow="none" className="p-4" animate={false}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-white text-sm truncate">{food.nameAr || food.name}</h3>
-                        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                          style={{ background: 'rgba(107,33,168,0.2)', color: '#c084fc' }}>
-                          ~{food.estimatedWeight}{t('جم', 'g')}
-                        </span>
+              {detectedFoods.map((food, i) => {
+                const isRecalc  = recalculating === i
+                const isEditingThisName = editingName?.index === i
+
+                const macros: Array<{
+                  field: 'calories' | 'protein' | 'carbs' | 'fat'
+                  color: string
+                  labelAr: string
+                  labelEn: string
+                  unit: string
+                }> = [
+                  { field: 'calories', color: '#f59e0b', labelAr: 'سعرة', labelEn: 'kcal', unit: '' },
+                  { field: 'protein',  color: '#06b6d4', labelAr: 'بروتين', labelEn: 'P', unit: 'g' },
+                  { field: 'carbs',    color: '#97E325', labelAr: 'كارب', labelEn: 'C', unit: 'g' },
+                  { field: 'fat',      color: '#FF5F1F', labelAr: 'دهن', labelEn: 'F', unit: 'g' },
+                ]
+
+                return (
+                  <GlassCard key={i} glow="none" className="p-4" animate={false}>
+                    {isRecalc ? (
+                      /* ── حالة إعادة الحساب ── */
+                      <div className="flex items-center gap-3 py-1">
+                        <Loader2 size={18} color="#c084fc" className="animate-spin flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold text-white/70">{t('يعيد الحساب...', 'Recalculating...')}</p>
+                          <p className="text-xs text-white/35 mt-0.5">{t('الذكاء الاصطناعي يحسب القيم الجديدة', 'AI is computing new values')}</p>
+                        </div>
                       </div>
-                      <div className="flex gap-3 text-xs">
-                        <span style={{ color: '#f59e0b' }}>{Math.round(food.nutrition.calories)} kcal</span>
-                        <span style={{ color: '#06b6d4' }}>{Math.round(food.nutrition.protein)}g {t('بروتين', 'P')}</span>
-                        <span style={{ color: '#97E325' }}>{Math.round(food.nutrition.carbs)}g {t('كارب', 'C')}</span>
-                        <span style={{ color: '#FF5F1F' }}>{Math.round(food.nutrition.fat)}g {t('دهن', 'F')}</span>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+
+                          {/* ── صف الاسم ── */}
+                          <div className="flex items-center gap-2 mb-2">
+                            {isEditingThisName ? (
+                              <>
+                                <input
+                                  value={editingName?.value ?? ''}
+                                  onChange={e => setEditingName({ index: i, value: e.target.value })}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleNameConfirm(i)
+                                    if (e.key === 'Escape') setEditingName(null)
+                                  }}
+                                  className="flex-1 text-sm font-bold text-white bg-transparent border-b outline-none min-w-0"
+                                  style={{ borderColor: 'rgba(192,132,252,0.5)' }}
+                                  autoFocus
+                                  dir="auto"
+                                />
+                                {/* زر تأكيد */}
+                                <button
+                                  onClick={() => handleNameConfirm(i)}
+                                  className="p-1.5 rounded-lg flex-shrink-0"
+                                  style={{ background: 'rgba(16,185,129,0.2)' }}>
+                                  <Check size={13} color="#10b981" />
+                                </button>
+                                {/* زر إلغاء */}
+                                <button
+                                  onClick={() => setEditingName(null)}
+                                  className="p-1.5 rounded-lg flex-shrink-0"
+                                  style={{ background: 'rgba(239,68,68,0.15)' }}>
+                                  <X size={13} color="#ef4444" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <h3 className="font-bold text-white text-sm truncate">{food.nameAr || food.name}</h3>
+                                <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                                  style={{ background: 'rgba(107,33,168,0.2)', color: '#c084fc' }}>
+                                  ~{food.estimatedWeight}{t('جم', 'g')}
+                                </span>
+                                {/* زر تعديل الاسم */}
+                                <button
+                                  onClick={() => setEditingName({ index: i, value: food.nameAr || food.name })}
+                                  className="p-1.5 rounded-lg flex-shrink-0"
+                                  style={{ background: 'rgba(192,132,252,0.12)', opacity: 0.7 }}
+                                  title={t('تعديل الاسم وإعادة الحساب', 'Edit name & recalculate')}>
+                                  <Pencil size={12} color="#c084fc" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+
+                          {/* ── صف القيم الغذائية (قابلة للتعديل) ── */}
+                          <div className="flex gap-1.5 flex-wrap">
+                            {macros.map(({ field, color, labelAr, labelEn, unit }) => {
+                              const isEditingThis =
+                                editingNutrition?.index === i && editingNutrition.field === field
+                              const displayVal = Math.round(food.nutrition[field])
+
+                              return isEditingThis ? (
+                                <div key={field} className="flex items-center gap-1 px-2 py-1 rounded-lg"
+                                  style={{ background: `${color}18`, border: `1px solid ${color}40` }}>
+                                  <input
+                                    type="number"
+                                    value={editingNutrition.value}
+                                    onChange={e => setEditingNutrition({ ...editingNutrition!, value: e.target.value })}
+                                    onBlur={() => {
+                                      const num = parseFloat(editingNutrition?.value ?? '')
+                                      if (!isNaN(num) && num >= 0) updateFoodNutrition(i, field, num)
+                                      setEditingNutrition(null)
+                                    }}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') {
+                                        const num = parseFloat(editingNutrition?.value ?? '')
+                                        if (!isNaN(num) && num >= 0) updateFoodNutrition(i, field, num)
+                                        setEditingNutrition(null)
+                                      }
+                                      if (e.key === 'Escape') setEditingNutrition(null)
+                                    }}
+                                    className="w-12 text-xs font-bold bg-transparent outline-none text-center"
+                                    style={{ color }}
+                                    autoFocus
+                                    min={0}
+                                  />
+                                  <span className="text-xs" style={{ color: `${color}90` }}>
+                                    {unit}{unit ? ' ' : ''}{t(labelAr, labelEn)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <button
+                                  key={field}
+                                  onClick={() => setEditingNutrition({ index: i, field, value: String(displayVal) })}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-opacity hover:opacity-80 active:opacity-60"
+                                  style={{ background: `${color}10` }}>
+                                  <span style={{ color }}>
+                                    {displayVal}{unit} {t(labelAr, labelEn)}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+
+                          {/* تلميح صغير */}
+                          {!isEditingThisName && (
+                            <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                              {t('✏️ اضغط على أي قيمة لتعديلها', '✏️ Tap any value to edit')}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* شارة الثقة */}
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                          style={{ background: 'rgba(107,33,168,0.15)' }}>
+                          <span className="text-base">
+                            {food.confidence > 0.85 ? '✅' : food.confidence > 0.6 ? '🟡' : '❓'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'rgba(107,33,168,0.15)' }}>
-                      <span className="text-lg">
-                        {food.confidence > 0.85 ? '✅' : food.confidence > 0.6 ? '🟡' : '❓'}
-                      </span>
-                    </div>
-                  </div>
-                </GlassCard>
-              ))}
+                    )}
+                  </GlassCard>
+                )
+              })}
             </div>
           )}
 

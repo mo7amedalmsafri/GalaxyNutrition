@@ -33,7 +33,11 @@ export default function RegisterPage() {
     })
 
     if (err) {
-      setError(err.message)
+      setError(
+        err.message === 'User already registered'
+          ? 'هذا البريد مسجّل مسبقاً'
+          : 'حدث خطأ، حاول مجدداً'
+      )
       setLoading(false)
       return
     }
