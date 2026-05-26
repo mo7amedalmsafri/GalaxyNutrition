@@ -385,7 +385,7 @@ export default function SettingsPage() {
           className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
           <Languages size={18} color="rgba(0,212,255,0.7)" className="flex-shrink-0" />
           <span className="text-sm text-white/70 flex-1">
-            {(local.language ?? 'ar') === 'ar' ? '🇸🇦 العربية' : '🇺🇸 English'}
+            {(local.language ?? 'ar') === 'ar' ? '🇦🇪 العربية' : '🇺🇸 English'}
           </span>
           <div className={`toggle-track ${(local.language ?? 'ar') === 'en' ? 'toggle-on' : ''}`}
             style={{ background: (local.language ?? 'ar') === 'en' ? 'rgba(0,212,255,0.85)' : 'rgba(255,255,255,0.12)' }}>

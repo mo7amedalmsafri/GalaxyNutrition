@@ -630,7 +630,7 @@ export default function Dashboard() {
             <Languages size={17} color="rgba(0,212,255,0.8)" className="flex-shrink-0" />
             <span className="text-sm flex-1 text-start"
               style={{ color: isLight ? 'rgba(15,15,35,0.82)' : 'rgba(255,255,255,0.82)' }}>
-              {(profile.language ?? 'ar') === 'ar' ? '🇸🇦 العربية' : '🇺🇸 English'}
+              {(profile.language ?? 'ar') === 'ar' ? '🇦🇪 العربية' : '🇺🇸 English'}
             </span>
             <div className={`toggle-track ${(profile.language ?? 'ar') === 'en' ? 'toggle-on' : ''}`}
               style={{ background: (profile.language ?? 'ar') === 'en' ? 'rgba(0,212,255,0.85)' : isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)' }}>
