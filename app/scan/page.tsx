@@ -36,6 +36,10 @@ export default function ScanPage() {
   const [editingNutrition, setEditingNutrition] = useState<{
     index: number; field: 'calories' | 'protein' | 'carbs' | 'fat'; value: string
   } | null>(null)
+  // تعديل اسم الوجبة الكاملة
+  const [editingMealDesc, setEditingMealDesc] = useState(false)
+  const [mealDescInput, setMealDescInput] = useState('')
+  const [recalculatingMeal, setRecalculatingMeal] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
@@ -60,13 +64,17 @@ export default function ScanPage() {
     ))
   }
 
-  // تأكيد تعديل اسم الوجبة → إعادة الحساب بالذكاء الاصطناعي
+  // تأكيد تعديل اسم مكوّن فردي → إعادة الحساب بالذكاء الاصطناعي
   const handleNameConfirm = async (index: number) => {
     if (!editingName || editingName.index !== index) return
     const newName = editingName.value.trim()
     if (!newName) { setEditingName(null); return }
 
     setEditingName(null)
+    // احفظ الاسم الجديد فوراً (حتى لو فشل الـ API)
+    setDetectedFoods(foods => foods.map((f, i) =>
+      i === index ? { ...f, nameAr: newName } : f
+    ))
     setRecalculating(index)
 
     try {
@@ -88,6 +96,48 @@ export default function ScanPage() {
       console.error('recalculate-food error:', err)
     }
     setRecalculating(null)
+  }
+
+  // تأكيد تعديل اسم الوجبة الكاملة → إعادة حساب كل شيء
+  const handleMealDescConfirm = async () => {
+    const newDesc = mealDescInput.trim()
+    if (!newDesc) { setEditingMealDesc(false); return }
+
+    setEditingMealDesc(false)
+    setMealDescription(newDesc)   // حدّث الاسم فوراً
+    setRecalculatingMeal(true)
+
+    try {
+      const res = await fetch('/api/recalculate-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foodName: newDesc, estimatedWeight: totalWeight || 100 }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDetectedFoods([{
+          name:            data.name    || newDesc,
+          nameAr:          data.nameAr  || newDesc,
+          estimatedWeight: totalWeight  || 100,
+          confidence:      1,
+          nutrition: {
+            calories:       data.nutrition.calories       ?? 0,
+            protein:        data.nutrition.protein        ?? 0,
+            carbs:          data.nutrition.carbs          ?? 0,
+            fat:            data.nutrition.fat            ?? 0,
+            fiber:          data.nutrition.fiber          ?? 0,
+            sugars:         data.nutrition.sugars         ?? 0,
+            saturatedFat:   data.nutrition.saturatedFat   ?? 0,
+            unsaturatedFat: data.nutrition.unsaturatedFat ?? 0,
+            sodium:         data.nutrition.sodium         ?? 0,
+            potassium:      data.nutrition.potassium      ?? 0,
+          },
+        }])
+      }
+    } catch (err) {
+      console.error('recalculate-meal error:', err)
+    }
+    setRecalculatingMeal(false)
   }
 
   const analyzeImage = async () => {
@@ -167,6 +217,9 @@ export default function ScanPage() {
     setEditingName(null)
     setRecalculating(null)
     setEditingNutrition(null)
+    setEditingMealDesc(false)
+    setMealDescInput('')
+    setRecalculatingMeal(false)
   }
 
   return (
@@ -311,11 +364,55 @@ export default function ScanPage() {
 
             {/* اسم الوجبة + إجمالي السعرات */}
             <div className="flex items-center justify-between mb-4">
-              <div>
+              <div className="flex-1 min-w-0 ml-3">
                 <p className="text-xs text-white/40 mb-0.5">{t('الوجبة الكاملة', 'Full Meal')}</p>
-                <h2 className="text-lg font-black text-white">{mealDescription || t('وجبة محللة', 'Analyzed Meal')}</h2>
+
+                {recalculatingMeal ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Loader2 size={16} color="#c084fc" className="animate-spin" />
+                    <span className="text-sm font-bold text-white/60">{t('يعيد الحساب...', 'Recalculating...')}</span>
+                  </div>
+                ) : editingMealDesc ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      value={mealDescInput}
+                      onChange={e => setMealDescInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleMealDescConfirm()
+                        if (e.key === 'Escape') setEditingMealDesc(false)
+                      }}
+                      className="flex-1 text-base font-black text-white bg-transparent border-b outline-none min-w-0"
+                      style={{ borderColor: 'rgba(192,132,252,0.5)' }}
+                      autoFocus
+                      dir="auto"
+                    />
+                    <button onClick={handleMealDescConfirm}
+                      className="p-1.5 rounded-lg flex-shrink-0"
+                      style={{ background: 'rgba(16,185,129,0.2)' }}>
+                      <Check size={14} color="#10b981" />
+                    </button>
+                    <button onClick={() => setEditingMealDesc(false)}
+                      className="p-1.5 rounded-lg flex-shrink-0"
+                      style={{ background: 'rgba(239,68,68,0.15)' }}>
+                      <X size={14} color="#ef4444" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-white truncate">
+                      {mealDescription || t('وجبة محللة', 'Analyzed Meal')}
+                    </h2>
+                    <button
+                      onClick={() => { setMealDescInput(mealDescription); setEditingMealDesc(true) }}
+                      className="p-1.5 rounded-lg flex-shrink-0"
+                      style={{ background: 'rgba(192,132,252,0.12)', opacity: 0.75 }}
+                      title={t('تعديل اسم الوجبة وإعادة الحساب', 'Edit meal name & recalculate')}>
+                      <Pencil size={12} color="#c084fc" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <p className="text-2xl font-black" style={{ color: '#f59e0b' }}>
                   {Math.round(totalNutrition.calories)}
                 </p>
