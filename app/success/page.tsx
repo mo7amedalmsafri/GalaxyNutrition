@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Logo from '@/components/Logo'
 
-export default function SuccessPage() {
-  const router       = useRouter()
-  const params       = useSearchParams()
-  const sessionId    = params.get('session_id')
+// useSearchParams must live inside a Suspense boundary in Next.js App Router
+function SuccessContent() {
+  const router    = useRouter()
+  useSearchParams() // session_id available but not needed for display
   const [count, setCount] = useState(5)
 
   // Mark Pro active in localStorage so limits.ts picks it up immediately
@@ -36,11 +36,11 @@ export default function SuccessPage() {
             key={i}
             className="absolute text-2xl animate-bounce"
             style={{
-              left:             `${Math.random() * 100}%`,
-              top:              `${Math.random() * 100}%`,
-              animationDelay:   `${Math.random() * 2}s`,
-              animationDuration:`${1.5 + Math.random()}s`,
-              opacity:          0.6 + Math.random() * 0.4,
+              left:              `${Math.random() * 100}%`,
+              top:               `${Math.random() * 100}%`,
+              animationDelay:    `${Math.random() * 2}s`,
+              animationDuration: `${1.5 + Math.random()}s`,
+              opacity:           0.6 + Math.random() * 0.4,
             }}
           >
             {['⭐', '✨', '🌟', '💫'][i % 4]}
@@ -69,9 +69,9 @@ export default function SuccessPage() {
             مرحباً بك في{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                background:           'linear-gradient(135deg, #f59e0b, #fbbf24)',
                 WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                WebkitTextFillColor:  'transparent',
               }}
             >
               Galaxy Pro ⭐
@@ -85,10 +85,10 @@ export default function SuccessPage() {
         {/* Benefits */}
         <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
           {[
-            { icon: '📷', text: 'تصوير غير محدود' },
-            { icon: '📋', text: 'خطط غذائية ∞'   },
+            { icon: '📷', text: 'تصوير غير محدود'   },
+            { icon: '📋', text: 'خطط غذائية ∞'      },
             { icon: '⚡', text: 'ذكاء اصطناعي كامل' },
-            { icon: '🚫', text: 'بدون قيود'        },
+            { icon: '🚫', text: 'بدون قيود'          },
           ].map(b => (
             <div
               key={b.text}
@@ -115,5 +115,17 @@ export default function SuccessPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#09090D' }}>
+        <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 }

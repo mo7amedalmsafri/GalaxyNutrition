@@ -144,23 +144,25 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await supabase.from('profiles').upsert({
-          id:             user.id,
-          name:           profile.name,
-          age:            profile.age,
-          height:         profile.height,
-          weight:         profile.weight,
-          target_weight:  profile.targetWeight,
-          gender:         profile.gender,
-          activity_level: profile.activityLevel,
-          goal:           profile.goal,
-          diet:           profile.diet,
-          daily_calories: profile.dailyCalories,
-          target_protein: profile.targetProtein,
-          target_carbs:   profile.targetCarbs,
-          target_fat:     profile.targetFat,
-          target_water:   profile.targetWater,
-          updated_at:     new Date().toISOString(),
-        })
+          id:                   user.id,
+          name:                 profile.name,
+          age:                  profile.age,
+          height:               profile.height,
+          weight:               profile.weight,
+          target_weight:        profile.targetWeight,
+          gender:               profile.gender,
+          activity_level:       profile.activityLevel,
+          goal:                 profile.goal,
+          daily_calories:       profile.dailyCalories,
+          target_protein:       profile.targetProtein,
+          target_carbs:         profile.targetCarbs,
+          target_fat:           profile.targetFat,
+          target_water:         profile.targetWater,
+          completed_onboarding: true,
+          theme:                'dark',
+          notifications:        false,
+          updated_at:           new Date().toISOString(),
+        }, { onConflict: 'id' })
       }
     } catch { /* Fail silently */ }
 

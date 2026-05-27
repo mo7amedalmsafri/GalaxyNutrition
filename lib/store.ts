@@ -52,6 +52,10 @@ export interface StoredProfile {
   theme: 'dark' | 'light'
   notifications: boolean
   language: 'ar' | 'en'
+  // ── Gamification ──────────────────────────────────────────────────
+  xpLocked?:  number   // XP من أيام سابقة — دائم لا يُمحى
+  xpPending?: number   // XP اليوم الحالي — مؤقت قابل للخصم
+  xpDate?:    string   // YYYY-MM-DD — تاريخ آخر تحديث لـ xpPending
 }
 
 export const DEFAULT_PROFILE: StoredProfile = {
@@ -73,6 +77,9 @@ export const DEFAULT_PROFILE: StoredProfile = {
   theme: 'dark',
   notifications: false,
   language: 'ar',
+  xpLocked:  0,
+  xpPending: 0,
+  xpDate:    '',
 }
 
 /** Returns t(ar, en) — picks based on the stored language preference. */

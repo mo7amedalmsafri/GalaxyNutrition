@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { FoodItem } from '@/lib/types'
+import type { StoredProfile } from '@/lib/store'
 
 // ── helpers ─────────────────────────────────────────────────────────
 function rowToFoodItem(row: Record<string, unknown>): FoodItem {
@@ -194,6 +195,84 @@ export async function getPlans(): Promise<WorkoutPlan[]> {
 export async function deletePlan(id: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('workout_plans').delete().eq('id', id)
+}
+
+// ── Profile ──────────────────────────────────────────────────────────────
+
+/**
+ * Load the user's profile from Supabase.
+ * Returns null if not logged in, no profile, or onboarding not completed.
+ */
+export async function loadProfileFromSupabase(): Promise<StoredProfile | null> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (error || !data || !data.completed_onboarding) return null
+
+    return {
+      name:                data.name           ?? 'مستخدم',
+      age:                 data.age            ?? 25,
+      height:              data.height         ?? 170,
+      weight:              data.weight         ?? 75,
+      targetWeight:        data.target_weight  ?? 70,
+      gender:              (data.gender        ?? 'male') as 'male' | 'female',
+      activityLevel:       data.activity_level ?? 'moderate',
+      goal:                data.goal           ?? 'lose',
+      diet:                'balanced',          // not stored in DB, use default
+      dailyCalories:       data.daily_calories ?? 2000,
+      targetProtein:       data.target_protein ?? 150,
+      targetCarbs:         data.target_carbs   ?? 200,
+      targetFat:           data.target_fat     ?? 65,
+      targetWater:         data.target_water   ?? 2500,
+      completedOnboarding: true,
+      theme:               (data.theme         ?? 'dark') as 'dark' | 'light',
+      notifications:       data.notifications  ?? false,
+      language:            'ar',               // not stored in DB, use default
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Save the user's profile to Supabase (only persists columns that exist in the DB).
+ * diet and language are localStorage-only and are intentionally excluded.
+ */
+export async function saveProfileToSupabase(profile: StoredProfile): Promise<void> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    await supabase.from('profiles').upsert({
+      id:                   user.id,
+      name:                 profile.name,
+      age:                  profile.age,
+      height:               profile.height,
+      weight:               profile.weight,
+      target_weight:        profile.targetWeight,
+      gender:               profile.gender,
+      activity_level:       profile.activityLevel,
+      goal:                 profile.goal,
+      daily_calories:       profile.dailyCalories,
+      target_protein:       profile.targetProtein,
+      target_carbs:         profile.targetCarbs,
+      target_fat:           profile.targetFat,
+      target_water:         profile.targetWater,
+      completed_onboarding: profile.completedOnboarding ?? true,
+      theme:                profile.theme ?? 'dark',
+      notifications:        profile.notifications ?? false,
+      updated_at:           new Date().toISOString(),
+    }, { onConflict: 'id' })
+  } catch { /* silent */ }
 }
 
 // ── Water Logs ─────────────────────────────────────────────────────────

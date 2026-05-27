@@ -8,6 +8,7 @@ import {
   Dumbbell, Wheat, Languages, Check, Weight,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { saveProfileToSupabase } from '@/lib/db'
 import { calculateBMI, calculateDailyCalories } from '@/lib/utils'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { isProUser, activatePro, deactivatePro, isAdmin } from '@/lib/limits'
@@ -252,8 +253,10 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSave = () => {
-    setStoredProfile({ ...local, completedOnboarding: true })
+  const handleSave = async () => {
+    const updated = { ...local, completedOnboarding: true }
+    setStoredProfile(updated)
+    saveProfileToSupabase(updated) // fire-and-forget, no need to await
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }

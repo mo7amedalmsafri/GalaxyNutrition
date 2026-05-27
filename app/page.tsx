@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info } from 'lucide-react'
+import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import BMICircle from '@/components/BMICircle'
 import CalorieRing from '@/components/CalorieRing'
@@ -14,7 +14,9 @@ import FoodSearchBar from '@/components/FoodSearchBar'
 import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
-import { getFoodLogs, addFoodLog, deleteFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry } from '@/lib/db'
+import { getFoodLogs, addFoodLog, deleteFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase } from '@/lib/db'
+import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, LevelInfo, buildXpRollover } from '@/lib/gamification'
+import LevelRing from '@/components/LevelRing'
 
 // ── Water drop SVG with partial fill ──
 function WaterDrop({ index, fillPct }: { index: number; fillPct: number }) {
@@ -65,6 +67,8 @@ export default function Dashboard() {
   const [profile, setProfile, profileHydrated] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const lang    = profile.language ?? 'ar'
   const isLight = (profile.theme ?? 'dark') === 'light'
+  const [checkingRemoteProfile, setCheckingRemoteProfile] = useState(false)
+  const [levelUpInfo, setLevelUpInfo] = useState<LevelInfo | null>(null)
   const [todayFoods, setTodayFoods] = useState<FoodItem[]>([])
   const [waterMl, setWaterMlState] = useState(0)
   const [weightHistory, setWeightHistory] = useState(WEIGHT_HISTORY_FALLBACK)
@@ -75,11 +79,22 @@ export default function Dashboard() {
   const [weightInput, setWeightInput] = useState('')
   const [savingWeight, setSavingWeight] = useState(false)
 
-  // Redirect to onboarding if not completed
+  // Redirect to onboarding if not completed — but first check Supabase
+  // in case the user has a profile saved there (e.g. after logging out and back in)
   useEffect(() => {
     if (!profileHydrated) return
     if (!profile.completedOnboarding) {
-      router.replace('/onboarding')
+      setCheckingRemoteProfile(true)
+      loadProfileFromSupabase().then(remote => {
+        if (remote) {
+          // Found a completed profile in Supabase → sync to localStorage
+          setProfile(remote)
+        } else {
+          // No remote profile either → send to onboarding
+          router.replace('/onboarding')
+        }
+        setCheckingRemoteProfile(false)
+      })
     }
   }, [profileHydrated, profile.completedOnboarding, router])
 
@@ -95,12 +110,58 @@ export default function Dashboard() {
     })
   }, [profileHydrated, profile.completedOnboarding, today])
 
-  if (!profileHydrated || !profile.completedOnboarding) {
+  // XP day rollover: when a new day starts, lock yesterday's pending XP permanently
+  useEffect(() => {
+    if (!profileHydrated || !profile.completedOnboarding) return
+    const patch = buildXpRollover(
+      profile.xpLocked  ?? 0,
+      profile.xpPending ?? 0,
+      profile.xpDate,
+      today
+    )
+    if (patch) setProfile(p => ({ ...p, ...patch }))
+  }, [profileHydrated, profile.completedOnboarding]) // intentionally run once on mount
+
+  if (!profileHydrated || checkingRemoteProfile || !profile.completedOnboarding) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
       </div>
     )
+  }
+
+  // ── Gamification helpers ────────────────────────────────────────────
+  // Total XP = locked (previous days, permanent) + pending (today, reversible)
+  const currentXp = (profile.xpLocked ?? 0) + (profile.xpPending ?? 0)
+  const levelInfo = getCurrentLevel(currentXp)
+  const xpToNext  = getXpToNextLevel(currentXp)
+
+  /** Award XP for a positive action. Adds to today's pending XP only. */
+  const earn = (amount: number) => {
+    const oldTotal     = (profile.xpLocked ?? 0) + (profile.xpPending ?? 0)
+    const newTotal     = oldTotal + amount
+    const oldLevelNum  = getCurrentLevel(oldTotal).level
+    const newLevelInfo = getCurrentLevel(newTotal)
+    setProfile(p => ({
+      ...p,
+      xpPending: (p.xpPending ?? 0) + amount,
+      xpDate:    today,
+    }))
+    if (newLevelInfo.level > oldLevelNum) {
+      setLevelUpInfo(newLevelInfo)
+      setTimeout(() => setLevelUpInfo(null), 5000)
+    }
+  }
+
+  /**
+   * Deduct XP when an action is undone (e.g. meal deleted).
+   * Only reduces today's pending XP — locked XP from previous days is NEVER touched.
+   */
+  const loseXp = (amount: number) => {
+    setProfile(p => ({
+      ...p,
+      xpPending: Math.max(0, (p.xpPending ?? 0) - amount),
+    }))
   }
 
   const bmi = calculateBMI(profile.weight, profile.height)
@@ -114,17 +175,20 @@ export default function Dashboard() {
     setTodayFoods(prev => [...prev, tempItem])
     const saved = await addFoodLog(today, item)
     if (saved) setTodayFoods(prev => prev.map(f => f.id === tempItem.id ? saved : f))
+    earn(XP_REWARDS.LOG_FOOD)
   }
 
   const handleDeleteFood = async (id: string) => {
     setTodayFoods(prev => prev.filter(f => f.id !== id))
     await deleteFoodLog(id)
+    loseXp(XP_REWARDS.LOG_FOOD)   // خصم XP — فقط من نقاط اليوم
   }
 
   const addWater = (ml: number) => {
     const next = Math.min(waterMl + ml, 6000)
     setWaterMlState(next)
     setWaterLog(today, next)
+    earn(XP_REWARDS.LOG_WATER)
   }
 
   const handleWaterInput = () => {
@@ -150,6 +214,7 @@ export default function Dashboard() {
     setWeightInput('')
     setShowWeightInput(false)
     setSavingWeight(false)
+    earn(XP_REWARDS.LOG_WEIGHT)
   }
 
   // ── Drawer settings handlers ─────────────────────────────────────
@@ -190,25 +255,52 @@ export default function Dashboard() {
 
       {/* Header */}
       <div className="flex items-center justify-between animate-fade-in">
-        <div>
+        {/* Left: greeting + level badge */}
+        <div className="flex-1 min-w-0">
           <p className="text-white/50 text-sm">
             {new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ar-SA', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
           </p>
           <h1 className="text-xl font-black text-white mt-0.5">
             {t('مرحباً،', 'Hello,')} <span className="text-gradient-galaxy">{profile.name}</span> 👋
           </h1>
+          {/* Level badge row */}
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span
+              className="text-[11px] px-2 py-0.5 rounded-full font-bold flex-shrink-0"
+              style={{
+                background: `${levelInfo.color}22`,
+                color:       levelInfo.color,
+                border:      `1px solid ${levelInfo.color}40`,
+              }}
+            >
+              {levelInfo.icon} {lang === 'en' ? levelInfo.nameEn : levelInfo.name}
+            </span>
+            <span className="text-[11px] text-white/30 flex-shrink-0">
+              {currentXp} XP
+            </span>
+            {xpToNext > 0 && (
+              <span className="text-[11px] text-white/20 flex-shrink-0">
+                · {xpToNext} {t('للمستوى التالي', 'to next level')}
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => setShowDrawer(true)}
-          className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
-          style={{
-            background: isLight ? '#ffffff' : 'rgba(255,255,255,0.07)',
-            border:     isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.12)',
-            boxShadow:  isLight ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
-          }}
-        >
-          <Menu size={20} color={isLight ? 'rgba(30,30,50,0.65)' : 'rgba(255,255,255,0.75)'} />
-        </button>
+
+        {/* Right: level ring + menu */}
+        <div className="flex items-center gap-3 flex-shrink-0 mr-2">
+          <LevelRing xp={currentXp} size={50} />
+          <button
+            onClick={() => setShowDrawer(true)}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
+            style={{
+              background: isLight ? '#ffffff' : 'rgba(255,255,255,0.07)',
+              border:     isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.12)',
+              boxShadow:  isLight ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            <Menu size={20} color={isLight ? 'rgba(30,30,50,0.65)' : 'rgba(255,255,255,0.75)'} />
+          </button>
+        </div>
       </div>
 
       {/* Food Search Bar */}
@@ -488,6 +580,42 @@ export default function Dashboard() {
 
       {showFoodModal && (
         <FoodEntryModal onSave={handleAddFood} onClose={() => setShowFoodModal(false)} />
+      )}
+
+      {/* ── Level-Up Toast ── */}
+      {levelUpInfo && (
+        <div
+          className="fixed bottom-28 left-4 right-4 z-50 max-w-lg mx-auto animate-slide-up"
+          style={{
+            background:   `linear-gradient(135deg, ${levelUpInfo.color}f0, ${levelUpInfo.color}b0)`,
+            borderRadius: '20px',
+            padding:      '14px 18px',
+            boxShadow:    `0 8px 40px ${levelUpInfo.color}55, 0 2px 12px rgba(0,0,0,0.4)`,
+            border:       `1px solid ${levelUpInfo.color}70`,
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="text-4xl animate-bounce flex-shrink-0">{levelUpInfo.icon}</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-white text-sm leading-none mb-0.5">
+                🎉 {lang === 'en' ? 'Level Up!' : 'مستوى جديد!'}
+              </p>
+              <p className="font-black text-white text-xl leading-none">
+                {lang === 'en' ? levelUpInfo.nameEn : levelUpInfo.name}
+              </p>
+              <p className="text-white/80 text-xs mt-1 leading-snug">
+                🎁 {lang === 'en' ? levelUpInfo.rewardEn : levelUpInfo.rewardAr}
+              </p>
+            </div>
+            <button
+              onClick={() => setLevelUpInfo(null)}
+              className="p-1.5 rounded-xl flex-shrink-0 active:scale-90 transition-transform"
+              style={{ background: 'rgba(255,255,255,0.2)' }}
+            >
+              <X size={16} color="white" />
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Side Drawer Backdrop ── */}
