@@ -7,7 +7,7 @@ import { DetectedFood, FoodItem } from '@/lib/types'
 import { addFoodLog } from '@/lib/db'
 import { getTodayDate } from '@/lib/utils'
 import { useT, useLang, useLocalStorage, StoredProfile, DEFAULT_PROFILE } from '@/lib/store'
-import { XP_REWARDS } from '@/lib/gamification'
+import { XP_REWARDS, capDailyXp } from '@/lib/gamification'
 import { createClient } from '@/lib/supabase/client'
 import { canScan, remainingScans, incrementScanCount, FREE_DAILY_SCANS } from '@/lib/limits'
 
@@ -204,12 +204,12 @@ export default function ScanPage() {
         potassium:      detectedFoods.reduce((s, f) => s + (f.nutrition.potassium ?? 0), 0),
       },
     })
-    // Earn XP for scanning & adding a meal (today's pending XP)
-    setProfile(p => ({
-      ...p,
-      xpPending: (p.xpPending ?? 0) + XP_REWARDS.SCAN_FOOD,
-      xpDate:    getTodayDate(),
-    }))
+    // Earn XP for scanning & adding a meal — respects the daily cap
+    setProfile(p => {
+      const toAdd = capDailyXp(p.xpPending ?? 0, XP_REWARDS.SCAN_FOOD)
+      if (toAdd <= 0) return p
+      return { ...p, xpPending: (p.xpPending ?? 0) + toAdd, xpDate: getTodayDate() }
+    })
     setMealAdded(true)
   }
 

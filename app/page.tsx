@@ -15,7 +15,7 @@ import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { getFoodLogs, addFoodLog, deleteFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase } from '@/lib/db'
-import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, LevelInfo, buildXpRollover } from '@/lib/gamification'
+import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
 
 // ── Water drop SVG with partial fill ──
@@ -136,15 +136,19 @@ export default function Dashboard() {
   const levelInfo = getCurrentLevel(currentXp)
   const xpToNext  = getXpToNextLevel(currentXp)
 
-  /** Award XP for a positive action. Adds to today's pending XP only. */
+  /** Award XP for a positive action — respects the daily cap of XP_DAILY_CAP. */
   const earn = (amount: number) => {
-    const oldTotal     = (profile.xpLocked ?? 0) + (profile.xpPending ?? 0)
-    const newTotal     = oldTotal + amount
+    const currentPending = profile.xpPending ?? 0
+    const actual = capDailyXp(currentPending, amount)
+    if (actual <= 0) return   // daily cap already reached
+
+    const oldTotal     = (profile.xpLocked ?? 0) + currentPending
+    const newTotal     = oldTotal + actual
     const oldLevelNum  = getCurrentLevel(oldTotal).level
     const newLevelInfo = getCurrentLevel(newTotal)
     setProfile(p => ({
       ...p,
-      xpPending: (p.xpPending ?? 0) + amount,
+      xpPending: (p.xpPending ?? 0) + actual,
       xpDate:    today,
     }))
     if (newLevelInfo.level > oldLevelNum) {
@@ -278,11 +282,21 @@ export default function Dashboard() {
             <span className="text-[11px] text-white/30 flex-shrink-0">
               {currentXp} XP
             </span>
-            {xpToNext > 0 && (
-              <span className="text-[11px] text-white/20 flex-shrink-0">
-                · {xpToNext} {t('للمستوى التالي', 'to next level')}
-              </span>
-            )}
+            {/* Daily cap indicator */}
+            {(() => {
+              const todayXp = profile.xpPending ?? 0
+              const capReached = todayXp >= XP_DAILY_CAP
+              return capReached ? (
+                <span className="text-[11px] font-bold flex-shrink-0"
+                  style={{ color: levelInfo.color }}>
+                  ✓ {t('اكتملت حصة اليوم', 'Daily cap reached')}
+                </span>
+              ) : (
+                <span className="text-[11px] text-white/20 flex-shrink-0">
+                  · {todayXp}/{XP_DAILY_CAP} {t('اليوم', 'today')}
+                </span>
+              )
+            })()}
           </div>
         </div>
 

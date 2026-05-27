@@ -72,6 +72,18 @@ export const XP_REWARDS = {
   SCAN_FOOD:  20,   // مسح طعام بالكاميرا
 }
 
+/** Maximum XP that can be earned in a single day */
+export const XP_DAILY_CAP = 50
+
+/**
+ * Returns how much XP should actually be awarded, capped by the daily limit.
+ * If the cap is already reached, returns 0.
+ */
+export function capDailyXp(currentPending: number, amount: number): number {
+  const remaining = Math.max(0, XP_DAILY_CAP - currentPending)
+  return Math.min(amount, remaining)
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 /** Current level based on total XP */
