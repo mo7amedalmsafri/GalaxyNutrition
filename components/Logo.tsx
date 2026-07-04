@@ -18,9 +18,10 @@ export default function Logo({ size = 80 }: { size?: number }) {
           <stop offset="45%" stopColor="#ec4899" />
           <stop offset="100%" stopColor="#6b21a8" />
         </linearGradient>
-        <linearGradient id="stemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#6b21a8" stopOpacity="0.5" />
+        {/* د tail: its own softer cyan→violet gradient */}
+        <linearGradient id="dalGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#8b5cf6" />
         </linearGradient>
         <radialGradient id="starGrad" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
@@ -58,24 +59,33 @@ export default function Logo({ size = 80 }: { size?: number }) {
       {/* Subtle inner glow */}
       <circle cx="50" cy="50" r="30" fill="#6b21a8" fillOpacity="0.07" />
 
-      {/* ── Hybrid د / D — one continuous stroke ── */}
-      {/* Tip (like د's start) → right-bulging bowl (D) → baseline tail gliding left (د) */}
+      {/* ── Full Latin D (strong) ── */}
+      {/* Stem: solid left vertical, same weight as the bowl */}
       <path
-        d="M 38,28 C 62,23 76,36 74,50 C 72,64 60,71 36,69.5 C 30,69 25,67.5 20.5,64.5"
+        d="M 37,29 C 36,42.5 36,57 37,70"
         stroke="url(#armGrad)"
         strokeWidth="6"
         strokeLinecap="round"
         fill="none"
         filter="url(#glow)"
       />
-      {/* Subtle D stem hint */}
+      {/* Bowl: from stem top, bulging right, back to stem bottom */}
       <path
-        d="M 36,31.5 C 34.8,43 34.4,55 35.6,66.5"
-        stroke="url(#stemGrad)"
-        strokeWidth="2.3"
+        d="M 37,29 C 63,23.5 76,36 74.5,50 C 73,64 61.5,72.5 37,70"
+        stroke="url(#armGrad)"
+        strokeWidth="6"
         strokeLinecap="round"
         fill="none"
-        opacity="0.55"
+        filter="url(#glow)"
+      />
+      {/* د tail (lighter, different gradient): baseline sweeping left like د's base */}
+      <path
+        d="M 37,70 C 31,69.8 25.5,68 20.5,64"
+        stroke="url(#dalGrad)"
+        strokeWidth="5"
+        strokeLinecap="round"
+        fill="none"
+        opacity="0.9"
         filter="url(#glow)"
       />
 
