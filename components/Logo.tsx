@@ -9,93 +9,78 @@ export default function Logo({ size = 80 }: { size?: number }) {
       className="no-invert"
     >
       <defs>
-        <radialGradient id="logoBg" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#1a0533" />
-          <stop offset="100%" stopColor="#0a0014" />
-        </radialGradient>
-        <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#97E325" />
-          <stop offset="100%" stopColor="#00D4FF" />
+        {/* Gold D: yellow top → orange bottom */}
+        <linearGradient id="goldGrad" x1="50%" y1="0%" x2="60%" y2="100%">
+          <stop offset="0%" stopColor="#FFD84D" />
+          <stop offset="55%" stopColor="#FBAF1E" />
+          <stop offset="100%" stopColor="#F07C12" />
         </linearGradient>
-        <linearGradient id="dalGrad" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#06b6d4" />
-          <stop offset="100%" stopColor="#8b5cf6" />
+        {/* Green د: lime top → teal bottom */}
+        <linearGradient id="greenGrad" x1="60%" y1="0%" x2="30%" y2="100%">
+          <stop offset="0%" stopColor="#9BE428" />
+          <stop offset="55%" stopColor="#3ECB6A" />
+          <stop offset="100%" stopColor="#14C9C0" />
         </linearGradient>
-        <radialGradient id="starGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="50%" stopColor="#fbbf24" />
-          <stop offset="100%" stopColor="#ec4899" />
-        </radialGradient>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="outerGlow" x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        {/* Leaf */}
+        <linearGradient id="leafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#4FC93D" />
+          <stop offset="100%" stopColor="#B3EC2E" />
+        </linearGradient>
       </defs>
 
-      {/* Background circle */}
-      <circle cx="50" cy="50" r="48" fill="url(#logoBg)" />
-
-      {/* Gradient border ring */}
+      {/* Dark circle background */}
+      <circle cx="50" cy="50" r="48" fill="#08080c" />
       <circle
         cx="50" cy="50" r="47"
         fill="none"
-        stroke="url(#brandGrad)"
-        strokeWidth="1.5"
-        strokeOpacity="0.5"
+        stroke="url(#greenGrad)"
+        strokeWidth="1.2"
+        strokeOpacity="0.35"
       />
 
-      {/* Subtle inner glow */}
-      <circle cx="50" cy="50" r="30" fill="#00D4FF" fillOpacity="0.05" />
+      {/* Emblem, scaled slightly to fit the circle */}
+      <g transform="translate(50,50) scale(0.88) translate(-50,-50)">
+        {/* Gold Latin D (right) — bowl right, underside swoosh */}
+        <path fill="url(#goldGrad)" fillRule="evenodd" clipRule="evenodd"
+          d="M 52,16
+             L 58,15.5
+             C 75,15 85,28 85,45
+             C 85,61 76,71.5 60,74
+             C 54,75 47.5,77.5 42.5,80.5
+             C 46.5,74.5 48.8,70 49.3,65.5
+             L 49.3,23
+             C 49.8,20 50.7,17.5 52,16
+             Z
+             M 58,28.5
+             C 67.5,28.5 74,35.5 74,45
+             C 74,54.5 67.5,61.5 58,61.5
+             L 56.5,61.5
+             L 56.5,28.5
+             Z" />
 
-      {/* ── Progress-ring D ── */}
-      {/* Track: faint full D outline */}
-      <path
-        d="M 36,29 C 35,42.5 35,57 36,70 M 36,29 C 63,23.5 76,36 74.5,50 C 73,64 61.5,72.5 36,70"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Progress: stem + most of the bowl, brand green→cyan */}
-      <path
-        d="M 36,70 C 35,57 35,42.5 36,29 C 57.5,24.5 70,31.5 74,43"
-        stroke="url(#brandGrad)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        fill="none"
-        filter="url(#glow)"
-      />
-      {/* Progress endpoint: glowing star dot */}
-      <circle cx="74" cy="43" r="4.6" fill="url(#starGrad)" filter="url(#outerGlow)" />
-      <circle cx="74" cy="43" r="2" fill="white" opacity="0.95" />
+        {/* Green Arabic د (left, back-to-back ribbon) */}
+        <path fill="url(#greenGrad)"
+          d="M 46,20
+             C 33,17.5 21.5,26.5 19.8,40
+             C 18.3,52.5 24.5,63.5 34.5,68.5
+             L 27.5,78
+             C 33.5,74.5 38,72.8 42,72
+             C 33,66.5 27.3,55.5 28.2,44.5
+             C 29,34 36,27 46.5,27
+             C 47.2,24.5 47,22 46,20
+             Z" />
 
-      {/* د tail: baseline sweeping left, cyan→violet */}
-      <path
-        d="M 36,70 C 30,69.8 25,68 20.5,64"
-        stroke="url(#dalGrad)"
-        strokeWidth="5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.9"
-        filter="url(#glow)"
-      />
-
-      {/* Scattered mini stars */}
-      <circle cx="80" cy="64" r="1.4" fill="#00D4FF" opacity="0.7" />
-      <circle cx="20" cy="32" r="1.2" fill="#97E325" opacity="0.7" />
-      <circle cx="68" cy="14" r="1.2" fill="white" opacity="0.5" />
-      <circle cx="16" cy="76" r="1.4" fill="#8b5cf6" opacity="0.6" />
-      <circle cx="86" cy="26" r="1" fill="#97E325" opacity="0.6" />
+        {/* Leaf on top */}
+        <path fill="url(#leafGrad)"
+          d="M 47.5,17.5
+             C 43,9 33,6 24.5,8.5
+             C 25,17 31.5,23.5 40.5,24
+             C 43.5,24.2 46,21.5 47.5,17.5
+             Z" />
+        {/* Leaf vein slit */}
+        <path d="M 28,11 C 33,13.5 38.5,17.5 43.5,22"
+          stroke="#08080c" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      </g>
     </svg>
   )
 }
