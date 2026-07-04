@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { aiChat } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,9 +9,6 @@ export async function POST(req: NextRequest) {
     if (!dietName?.trim()) {
       return Response.json({ error: 'Missing diet name' }, { status: 400 })
     }
-
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) return Response.json({ error: 'API key missing' }, { status: 500 })
 
     const prompt = lang === 'ar'
       ? `أنت خبير تغذية. اشرح باختصار ما هو نظام "${dietName}" الغذائي.
@@ -34,28 +32,14 @@ Reply in English only in exactly this format (no extra headings):
 
 Keep each point to 1-2 sentences only.`
 
-    const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type':  'application/json',
-        'HTTP-Referer':  'https://galaxynutrition.app',
-        'X-Title':       'GalaxyNutrition',
-      },
-      body: JSON.stringify({
-        model:      'openai/gpt-4o-mini',
-        stream:     false,
-        max_tokens: 400,
-        messages:   [{ role: 'user', content: prompt }],
-      }),
-    })
+    const content = await aiChat(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 400 }
+    )
 
-    if (!upstream.ok) {
-      return Response.json({ error: `AI error ${upstream.status}` }, { status: 500 })
+    if (!content) {
+      return Response.json({ error: 'AI unavailable' }, { status: 500 })
     }
-
-    const data    = await upstream.json()
-    const content = data.choices?.[0]?.message?.content ?? ''
 
     return Response.json({ info: content.trim() })
   } catch (err) {

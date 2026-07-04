@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { aiChat, extractJson } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,9 +9,6 @@ export async function POST(req: NextRequest) {
     if (!exercise?.trim()) {
       return Response.json({ error: 'Missing exercise' }, { status: 400 })
     }
-
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) return Response.json({ error: 'API key missing' }, { status: 500 })
 
     const weightNote = weight
       ? (lang === 'ar' ? `وزن الشخص: ${weight} كجم.` : `Person weight: ${weight}kg.`)
@@ -42,30 +40,19 @@ Rules:
 - If no duration mentioned, assume 30 minutes
 - Give realistic numbers — no exaggeration`
 
-    const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type':  'application/json',
-        'HTTP-Referer':  'https://galaxynutrition.app',
-        'X-Title':       'GalaxyNutrition',
-      },
-      body: JSON.stringify({
-        model:           'openai/gpt-4o-mini',
-        stream:          false,
-        max_tokens:      80,
-        response_format: { type: 'json_object' },
-        messages:        [{ role: 'user', content: prompt }],
-      }),
-    })
+    const content = await aiChat(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 100, temperature: 0.1 }
+    )
 
-    if (!upstream.ok) {
-      return Response.json({ error: `AI error ${upstream.status}` }, { status: 500 })
+    if (!content) {
+      return Response.json({ error: 'AI unavailable' }, { status: 500 })
     }
 
-    const data    = await upstream.json()
-    const content = data.choices?.[0]?.message?.content ?? '{}'
-    const result  = JSON.parse(content)
+    const result = extractJson(content)
+    if (!result) {
+      return Response.json({ error: 'Bad AI response' }, { status: 500 })
+    }
 
     return Response.json(result)
   } catch (err) {

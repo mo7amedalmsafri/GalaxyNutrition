@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { aiChat, extractJson } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -6,11 +7,6 @@ export async function POST(req: NextRequest) {
 
     if (!foodName) {
       return NextResponse.json({ error: 'اسم الطعام مطلوب' }, { status: 400 })
-    }
-
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'مفتاح API غير متوفر' }, { status: 500 })
     }
 
     const weight = estimatedWeight || 100
@@ -61,41 +57,19 @@ Return exactly this format (JSON only, no extra text):
 
 Values are for the full ${weight}g amount. Use USDA database.`
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://galaxy-nutrition.app',
-        'X-Title': 'Galaxy Nutrition App',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.1,
-      }),
-    })
+    const content = await aiChat(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 500, temperature: 0.1 }
+    )
 
-    if (!response.ok) {
-      const err = await response.text()
-      console.error('OpenRouter error:', err)
+    if (!content) {
       return NextResponse.json({ error: 'فشل حساب القيم الغذائية' }, { status: 500 })
     }
 
-    const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
-
-    if (!content) {
-      return NextResponse.json({ error: 'لم يتم الحصول على نتيجة' }, { status: 500 })
-    }
-
-    const jsonMatch = content.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
+    const parsed = extractJson(content)
+    if (!parsed) {
       return NextResponse.json({ error: 'تنسيق الاستجابة غير صحيح' }, { status: 500 })
     }
-
-    const parsed = JSON.parse(jsonMatch[0])
 
     return NextResponse.json({
       success: true,

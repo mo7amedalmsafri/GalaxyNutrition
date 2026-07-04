@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { aiChat, extractJson } from '@/lib/ai'
 
 interface NutritionTargets {
   water: number      // liters/day
@@ -13,9 +14,6 @@ export async function POST(req: NextRequest) {
     const { planText, language, targets } = await req.json()
     const lang = (language as string) === 'en' ? 'en' : 'ar'
     const t = targets as NutritionTargets | undefined
-
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) return Response.json({ error: 'API key missing' }, { status: 500 })
 
     // ── Examples ──────────────────────────────────────────────────────────────
     const exampleAr = `{
@@ -85,34 +83,20 @@ Important rules:
 Nutrition plan:
 ${planText}`
 
-    // ── Call OpenRouter (non-streaming) ───────────────────────────────────────
-    const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type':  'application/json',
-        'HTTP-Referer':  'https://galaxynutrition.app',
-        'X-Title':       'GalaxyNutrition',
-      },
-      body: JSON.stringify({
-        model:           'openai/gpt-4o-mini',
-        stream:          false,
-        max_tokens:      600,
-        response_format: { type: 'json_object' },
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
+    // ── Call AI (free-first chain, non-streaming) ─────────────────────────────
+    const content = await aiChat(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 600, temperature: 0.1 }
+    )
 
-    if (!upstream.ok) {
-      const txt = await upstream.text().catch(() => '')
-      console.error('[parse-macros] upstream error:', upstream.status, txt)
-      return Response.json({ error: `AI error ${upstream.status}` }, { status: 500 })
+    if (!content) {
+      return Response.json({ error: 'AI unavailable' }, { status: 500 })
     }
 
-    const data     = await upstream.json()
-    const content: string = data.choices?.[0]?.message?.content ?? ''
-    const cleaned  = content.replace(/```(?:json)?\n?/g, '').trim()
-    const macros   = JSON.parse(cleaned)
+    const macros = extractJson(content)
+    if (!macros) {
+      return Response.json({ error: 'Parse failed' }, { status: 500 })
+    }
 
     // ── If targets provided, override calories field with user's value ─────────
     if (t && macros) {

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { aiChatStream } from '@/lib/ai'
 
 export const maxDuration = 60
 
@@ -21,14 +22,6 @@ export async function POST(req: NextRequest) {
       return new Response(
         JSON.stringify({ error: lang === 'ar' ? 'بيانات ناقصة' : 'Missing data' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: lang === 'ar' ? 'مفتاح API غير متوفر' : 'API key missing' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
@@ -176,37 +169,19 @@ Strict rules:
       ? `الجنس: ${genderLabel}\nالعمر: ${age} سنة\nالوزن: ${weight} كجم\nالطول: ${height} سم\nمستوى النشاط: ${activityLabel}\nالهدف: ${goalLabel}\nنوع النظام الغذائي: ${dietLabel}${targetsBlockAr}\n\nاكتب خطة تغذية يومية شاملة ومفصلة لهذا الشخص باللغة العربية، مع شرح مبادئ النظام الغذائي المختار.`
       : `Gender: ${genderLabel}\nAge: ${age} years\nWeight: ${weight} kg\nHeight: ${height} cm\nActivity Level: ${activityLabel}\nGoal: ${goalLabel}\nDiet Type: ${dietLabel}${targetsBlockEn}\n\nWrite a comprehensive detailed daily nutrition plan for this person, explaining the chosen diet type principles.`
 
-    // ── Call OpenRouter ───────────────────────────────────────────────────────
-    const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization':  `Bearer ${apiKey}`,
-        'Content-Type':   'application/json',
-        'HTTP-Referer':   'https://galaxynutrition.app',
-        'X-Title':        'GalaxyNutrition',
-      },
-      body: JSON.stringify({
-        model:      'openai/gpt-4o-mini',
-        stream:     true,
-        max_tokens: 2000,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user',   content: userPrompt   },
-        ],
-      }),
-    })
+    // ── Call AI (free-first chain, streaming) ─────────────────────────────────
+    const upstream = await aiChatStream(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   },
+      ],
+      { maxTokens: 2000 }
+    )
 
-    if (!upstream.ok || !upstream.body) {
-      const errText = await upstream.text().catch(() => 'unknown')
-      console.error('[generate-plan] OpenRouter error:', upstream.status, errText)
-      let detail = `OpenRouter ${upstream.status}: ${errText.slice(0, 200)}`
-      try {
-        const parsed = JSON.parse(errText)
-        const msg = parsed?.error?.message ?? parsed?.message ?? null
-        if (msg) detail = `(${upstream.status}) ${msg}`
-      } catch { /* keep raw */ }
+    if (!upstream || !upstream.body) {
+      console.error('[generate-plan] all AI providers failed')
       return new Response(
-        JSON.stringify({ error: detail }),
+        JSON.stringify({ error: lang === 'ar' ? 'الذكاء الاصطناعي غير متاح حالياً، حاول بعد قليل' : 'AI temporarily unavailable, try again shortly' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
