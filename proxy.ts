@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
 
   const { pathname } = request.nextUrl
-  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding']
+  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!session && !isPublic) {

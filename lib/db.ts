@@ -236,6 +236,9 @@ export async function loadProfileFromSupabase(): Promise<StoredProfile | null> {
       theme:               (data.theme         ?? 'dark') as 'dark' | 'light',
       notifications:       data.notifications  ?? false,
       language:            'ar',               // not stored in DB, use default
+      xpLocked:            data.xp_locked      ?? 0,
+      xpPending:           data.xp_pending     ?? 0,
+      xpDate:              data.xp_date        ?? '',
     }
   } catch {
     return null
@@ -273,6 +276,24 @@ export async function saveProfileToSupabase(profile: StoredProfile): Promise<voi
       updated_at:           new Date().toISOString(),
     }, { onConflict: 'id' })
   } catch { /* silent */ }
+}
+
+/**
+ * Sync XP to Supabase — separate from the profile upsert so it fails
+ * silently if the xp columns haven't been added yet (supabase-updates.sql).
+ */
+export async function saveXpToSupabase(
+  xpLocked: number, xpPending: number, xpDate: string
+): Promise<void> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase
+      .from('profiles')
+      .update({ xp_locked: xpLocked, xp_pending: xpPending, xp_date: xpDate })
+      .eq('id', user.id)
+  } catch { /* silent — columns may not exist yet */ }
 }
 
 // ── Water Logs ─────────────────────────────────────────────────────────

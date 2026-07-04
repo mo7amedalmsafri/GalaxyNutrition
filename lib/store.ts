@@ -94,3 +94,19 @@ export function useLang(): 'ar' | 'en' {
   const [profile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   return (profile.language ?? 'ar') as 'ar' | 'en'
 }
+
+/**
+ * True when the site is running inside the native iOS/Android Capacitor shell.
+ * Used to hide features that violate App Store rules (external payments,
+ * web notifications) in the native app while keeping them on the web.
+ */
+export function useIsNativeApp(): boolean {
+  const [isNative, setIsNative] = useState(false)
+  useEffect(() => {
+    const w = window as any
+    const capacitor = !!(w.Capacitor?.isNativePlatform?.() ?? w.Capacitor)
+    const uaNative  = /GalaxyNutritionApp/i.test(navigator.userAgent)
+    setIsNative(capacitor || uaNative)
+  }, [])
+  return isNative
+}

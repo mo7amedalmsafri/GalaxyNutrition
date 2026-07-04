@@ -13,8 +13,8 @@ import FoodEntryModal from '@/components/FoodEntryModal'
 import FoodSearchBar from '@/components/FoodSearchBar'
 import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
-import { getFoodLogs, addFoodLog, deleteFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase } from '@/lib/db'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp } from '@/lib/store'
+import { getFoodLogs, addFoodLog, deleteFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
 
@@ -62,6 +62,7 @@ const WEIGHT_HISTORY_FALLBACK = [
 export default function Dashboard() {
   const router = useRouter()
   const t = useT()
+  const isNativeApp = useIsNativeApp()
   const today = getTodayDate()
 
   const [profile, setProfile, profileHydrated] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
@@ -121,6 +122,15 @@ export default function Dashboard() {
     )
     if (patch) setProfile(p => ({ ...p, ...patch }))
   }, [profileHydrated, profile.completedOnboarding]) // intentionally run once on mount
+
+  // Sync XP to Supabase (debounced) so it survives device changes
+  useEffect(() => {
+    if (!profileHydrated || !profile.completedOnboarding) return
+    const t = setTimeout(() => {
+      saveXpToSupabase(profile.xpLocked ?? 0, profile.xpPending ?? 0, profile.xpDate ?? '')
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [profileHydrated, profile.completedOnboarding, profile.xpLocked, profile.xpPending, profile.xpDate])
 
   if (!profileHydrated || checkingRemoteProfile || !profile.completedOnboarding) {
     return (
@@ -736,19 +746,21 @@ export default function Dashboard() {
             {t('الإعدادات', 'Settings')}
           </p>
 
-          {/* Notifications */}
-          <button onClick={handleNotificationsToggle}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
-            <Bell size={17} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />
-            <span className="text-sm flex-1 text-start"
-              style={{ color: isLight ? 'rgba(15,15,35,0.82)' : 'rgba(255,255,255,0.82)' }}>
-              {t('الإشعارات', 'Notifications')}
-            </span>
-            <div className={`toggle-track ${profile.notifications ? 'toggle-on' : ''}`}
-              style={{ background: profile.notifications ? 'rgba(151,227,37,0.85)' : isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)' }}>
-              <div className="toggle-thumb" />
-            </div>
-          </button>
+          {/* Notifications — web only (Web Notifications API doesn't work in the iOS WebView) */}
+          {!isNativeApp && (
+            <button onClick={handleNotificationsToggle}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
+              <Bell size={17} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />
+              <span className="text-sm flex-1 text-start"
+                style={{ color: isLight ? 'rgba(15,15,35,0.82)' : 'rgba(255,255,255,0.82)' }}>
+                {t('الإشعارات', 'Notifications')}
+              </span>
+              <div className={`toggle-track ${profile.notifications ? 'toggle-on' : ''}`}
+                style={{ background: profile.notifications ? 'rgba(151,227,37,0.85)' : isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)' }}>
+                <div className="toggle-thumb" />
+              </div>
+            </button>
+          )}
 
           {/* Theme */}
           <button onClick={handleThemeToggle}

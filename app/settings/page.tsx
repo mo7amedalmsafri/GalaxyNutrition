@@ -10,7 +10,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { saveProfileToSupabase } from '@/lib/db'
 import { calculateBMI, calculateDailyCalories } from '@/lib/utils'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp } from '@/lib/store'
 import { isProUser, activatePro, deactivatePro, isAdmin } from '@/lib/limits'
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -92,6 +92,7 @@ const GOAL_OPTIONS = [
 export default function SettingsPage() {
   const router = useRouter()
   const t = useT()
+  const isNativeApp = useIsNativeApp()
   const [storedProfile, setStoredProfile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const [local, setLocal] = useState<StoredProfile>(DEFAULT_PROFILE)
   const [saved, setSaved]                         = useState(false)
@@ -401,16 +402,18 @@ export default function SettingsPage() {
 
       {/* ── Preferences ── */}
       <SettingsSection title={t('التفضيلات', 'Preferences')}>
-        {/* Notifications */}
-        <button onClick={handleNotificationsToggle}
-          className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
-          <Bell size={18} color="rgba(151,227,37,0.6)" className="flex-shrink-0" />
-          <span className="text-sm text-white/70 flex-1">{t('الإشعارات', 'Notifications')}</span>
-          <div className={`toggle-track ${local.notifications ? 'toggle-on' : ''}`}
-            style={{ background: local.notifications ? 'rgba(151,227,37,0.85)' : 'rgba(255,255,255,0.12)' }}>
-            <div className="toggle-thumb" />
-          </div>
-        </button>
+        {/* Notifications — web only (Web Notifications API doesn't work in the iOS WebView) */}
+        {!isNativeApp && (
+          <button onClick={handleNotificationsToggle}
+            className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+            <Bell size={18} color="rgba(151,227,37,0.6)" className="flex-shrink-0" />
+            <span className="text-sm text-white/70 flex-1">{t('الإشعارات', 'Notifications')}</span>
+            <div className={`toggle-track ${local.notifications ? 'toggle-on' : ''}`}
+              style={{ background: local.notifications ? 'rgba(151,227,37,0.85)' : 'rgba(255,255,255,0.12)' }}>
+              <div className="toggle-thumb" />
+            </div>
+          </button>
+        )}
 
         {/* Theme */}
         <button onClick={handleThemeToggle}
@@ -493,8 +496,8 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          {/* Manage Stripe subscription */}
-          {stripeActive && (
+          {/* Manage Stripe subscription — web only (App Store forbids external payment links) */}
+          {stripeActive && !isNativeApp && (
             <button
               onClick={handlePortal}
               disabled={portalLoading}
@@ -513,8 +516,8 @@ export default function SettingsPage() {
           )}
         </div>
 
-      ) : (
-        /* ── Upgrade Card ── */
+      ) : isNativeApp ? null : (
+        /* ── Upgrade Card — web only (App Store rule 3.1.1: no external payments in-app) ── */
         <div className="rounded-2xl overflow-hidden"
           style={{ border: '1px solid rgba(245,158,11,0.25)' }}>
 
