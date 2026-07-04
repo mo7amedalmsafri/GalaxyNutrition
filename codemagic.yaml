@@ -1,0 +1,62 @@
+# ══════════════════════════════════════════════════════════════════
+#  Galaxy Nutrition — Codemagic iOS build (no Mac needed)
+#
+#  Setup at https://codemagic.io :
+#  1. Sign up with your GitHub account → add this repository
+#  2. Team settings → integrations → App Store Connect:
+#     add an API key from https://appstoreconnect.apple.com/access/integrations/api
+#     (Keys tab → "+" → role: App Manager → download the .p8 file)
+#  3. Codemagic → app settings → iOS code signing:
+#     enable "Automatic" signing with the same App Store Connect key
+#  4. Create the app entry in App Store Connect first:
+#     My Apps → "+" → New App → bundle ID: com.galaxynutrition.app
+#  5. Start a build with the "ios-release" workflow → uploads to TestFlight
+# ══════════════════════════════════════════════════════════════════
+
+workflows:
+  ios-release:
+    name: iOS Release (TestFlight / App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: galaxy-asc-key   # name your API key this in Codemagic
+    environment:
+      vars:
+        BUNDLE_ID: com.galaxynutrition.app
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+      node: 20
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.galaxynutrition.app
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Sync Capacitor iOS project
+        script: npx cap sync ios
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
+
+      - name: Increment build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Set to true later when ready for public App Store release:
+        submit_to_app_store: false
