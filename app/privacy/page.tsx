@@ -89,7 +89,7 @@ export default function PrivacyPage() {
         ))}
 
         <p className="text-center text-white/25 text-xs pb-6">
-          Dietak دايتك · galaxy-nutrition.vercel.app
+          Dietak دايتك · dietak.vercel.app
         </p>
       </div>
     </div>

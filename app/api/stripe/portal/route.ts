@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 
 const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_placeholder')
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://galaxy-nutrition.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://dietak.vercel.app'
 
 export async function POST(req: NextRequest) {
   try {

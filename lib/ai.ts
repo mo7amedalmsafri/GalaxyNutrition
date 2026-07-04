@@ -38,7 +38,7 @@ const OPENROUTER_PAID = 'google/gemini-2.5-flash-lite'
 const OPENROUTER_HEADERS = (key: string) => ({
   'Authorization': `Bearer ${key}`,
   'Content-Type':  'application/json',
-  'HTTP-Referer':  'https://galaxy-nutrition.vercel.app',
+  'HTTP-Referer':  'https://dietak.vercel.app',
   'X-Title':       'Dietak',
 })
 

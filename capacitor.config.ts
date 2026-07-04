@@ -12,9 +12,10 @@ const config: CapacitorConfig = {
   // The iOS app is a native shell that loads the production site.
   // Deploys to Vercel update the app instantly — no App Store re-submission needed.
   server: {
-    url: 'https://galaxy-nutrition.vercel.app',
+    url: 'https://dietak.vercel.app',
     allowNavigation: [
-      'galaxy-nutrition.vercel.app',
+      'dietak.vercel.app',
+      'galaxy-nutrition.vercel.app',   // old domain — 307 redirects to the new one
       '*.supabase.co',
       'checkout.stripe.com',
       'billing.stripe.com',
