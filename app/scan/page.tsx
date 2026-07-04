@@ -696,7 +696,7 @@ export default function ScanPage() {
 
             <div className="p-3 rounded-xl text-center"
               style={{ background: 'rgba(151,227,37,0.07)', border: '1px solid rgba(151,227,37,0.15)' }}>
-              <p className="text-xs text-white/50 mb-1">{t('مع Galaxy Pro', 'With Galaxy Pro')}</p>
+              <p className="text-xs text-white/50 mb-1">{t('مع Dietak Pro', 'With Dietak Pro')}</p>
               <p className="text-sm font-bold" style={{ color: '#97E325' }}>
                 {t('📷 تحليل صور غير محدود', '📷 Unlimited AI scans')}
               </p>
@@ -707,7 +707,7 @@ export default function ScanPage() {
               style={{ background: 'linear-gradient(135deg, #97E325, #00D4FF)' }}
               onClick={() => setShowLimitModal(false)}
             >
-              ⭐ {t('ترقّ إلى Galaxy Pro', 'Upgrade to Galaxy Pro')}
+              ⭐ {t('ترقّ إلى Dietak Pro', 'Upgrade to Dietak Pro')}
             </button>
             <button
               onClick={() => setShowLimitModal(false)}

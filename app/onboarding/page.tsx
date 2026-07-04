@@ -214,8 +214,8 @@ export default function OnboardingPage() {
             <div className="animate-float"><Logo size={140} /></div>
             <div className="text-center">
               <h1 className="text-4xl font-black mb-2">
-                <span className="text-gradient-galaxy">تغذية</span>
-                <span className="text-white"> المجرة</span>
+                <span className="text-gradient-galaxy">دايتك</span>
+                <span className="text-white"> Dietak</span>
               </h1>
               <p className="text-white/50 text-base leading-relaxed">رفيقك الذكي في رحلة الصحة والتغذية</p>
             </div>

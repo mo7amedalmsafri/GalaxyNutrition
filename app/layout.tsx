@@ -5,13 +5,13 @@ import ConditionalLayout from '@/components/ConditionalLayout'
 import ThemeProvider from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
-  title: 'Galaxy Nutrition | تغذية المجرة',
-  description: 'تطبيق ذكي لتتبع التغذية وإدارة الوزن بتقنية الذكاء الاصطناعي',
+  title: 'Dietak | دايتك',
+  description: 'دايتك — تطبيق ذكي لتتبع التغذية وإدارة الوزن بتقنية الذكاء الاصطناعي',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Galaxy Nutrition',
+    title: 'Dietak',
   },
 }
 

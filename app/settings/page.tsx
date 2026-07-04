@@ -245,7 +245,7 @@ export default function SettingsPage() {
     if (permission === 'granted') {
       const updated = { ...local, notifications: true }
       setLocal(updated); setStoredProfile(updated)
-      new Notification('Galaxy Nutrition 🚀', {
+      new Notification('Dietak دايتك 🚀', {
         body: local.language === 'en'
           ? 'Notifications enabled! We will remind you to log your meals daily.'
           : 'الإشعارات مفعّلة! سنذكّرك بتسجيل وجباتك يومياً.',
@@ -452,7 +452,7 @@ export default function SettingsPage() {
         </button>
       </SettingsSection>
 
-      {/* ── Galaxy Pro ── */}
+      {/* ── Dietak Pro ── */}
       {proActive ? (
         /* ── Pro Active Card ── */
         <div className="rounded-2xl p-5 flex flex-col gap-3 animate-fade-in"
@@ -465,7 +465,7 @@ export default function SettingsPage() {
                 ⭐
               </div>
               <div>
-                <p className="font-black text-base" style={{ color: '#f59e0b' }}>Galaxy Pro</p>
+                <p className="font-black text-base" style={{ color: '#f59e0b' }}>Dietak Pro</p>
                 <p className="text-xs text-white/50">
                   {isAdmin(userEmail)
                     ? t('مفعّل — حساب المشرف', 'Active — Admin')
@@ -530,7 +530,7 @@ export default function SettingsPage() {
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
                   style={{ background: 'rgba(245,158,11,0.12)' }}>⭐</div>
                 <div>
-                  <p className="font-black text-base text-white">Galaxy Pro</p>
+                  <p className="font-black text-base text-white">Dietak Pro</p>
                   <p className="text-xs text-white/40">{t('اشتراك شهري', 'Monthly subscription')}</p>
                 </div>
               </div>
@@ -593,7 +593,7 @@ export default function SettingsPage() {
             </div>
             {proSuccess && (
               <p className="text-xs text-center font-bold" style={{ color: '#10b981' }}>
-                ✅ {t('Galaxy Pro مفعّل!', 'Galaxy Pro activated!')}
+                ✅ {t('Dietak Pro مفعّل!', 'Dietak Pro activated!')}
               </p>
             )}
           </div>
@@ -699,7 +699,7 @@ export default function SettingsPage() {
       )}
 
       <p className="text-center text-xs text-white/20 pb-2">
-        Galaxy Nutrition v1.0 • {t('مدعوم بالذكاء الاصطناعي', 'Powered by AI')} ✨
+        Dietak دايتك v1.0 • {t('مدعوم بالذكاء الاصطناعي', 'Powered by AI')} ✨
       </p>
     </div>
   )

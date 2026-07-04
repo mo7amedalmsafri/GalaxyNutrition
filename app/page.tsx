@@ -255,7 +255,7 @@ export default function Dashboard() {
     const permission = await Notification.requestPermission()
     if (permission === 'granted') {
       setProfile({ ...profile, notifications: true })
-      new Notification('Galaxy Nutrition 🚀', {
+      new Notification('Dietak دايتك 🚀', {
         body: profile.language === 'en'
           ? 'Notifications enabled!'
           : 'الإشعارات مفعّلة!',
@@ -668,7 +668,7 @@ export default function Dashboard() {
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-14 pb-4">
           <span className="text-base font-black text-gradient-galaxy tracking-wide">
-            Galaxy Nutrition
+            دايتك Dietak
           </span>
           <button
             onClick={() => setShowDrawer(false)}
@@ -823,7 +823,7 @@ export default function Dashboard() {
         {/* Footer */}
         <p className="text-center pb-10"
           style={{ fontSize: '11px', color: isLight ? 'rgba(15,15,35,0.2)' : 'rgba(255,255,255,0.18)' }}>
-          Galaxy Nutrition v1.0 ✨
+          Dietak دايتك v1.0 ✨
         </p>
       </aside>
     </div>

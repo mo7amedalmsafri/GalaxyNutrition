@@ -105,7 +105,7 @@ export function useIsNativeApp(): boolean {
   useEffect(() => {
     const w = window as any
     const capacitor = !!(w.Capacitor?.isNativePlatform?.() ?? w.Capacitor)
-    const uaNative  = /GalaxyNutritionApp/i.test(navigator.userAgent)
+    const uaNative  = /DietakApp|GalaxyNutritionApp/i.test(navigator.userAgent)
     setIsNative(capacitor || uaNative)
   }, [])
   return isNative

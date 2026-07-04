@@ -88,7 +88,7 @@ export default function LoginPage() {
       <div className="flex flex-col items-center mb-8 animate-fade-in">
         <Logo size={64} />
         <h1 className="text-2xl font-black text-white mt-3">
-          <span className="text-gradient-galaxy">Galaxy</span> Nutrition
+          <span className="text-gradient-galaxy">دايتك</span> Dietak
         </h1>
         <p className="text-white/40 text-sm mt-1">
           {showForgot ? 'أعد تعيين كلمة المرور' : 'سجّل دخولك للمتابعة'}

@@ -1,8 +1,8 @@
 import Logo from '@/components/Logo'
 
 export const metadata = {
-  title: 'سياسة الخصوصية | Galaxy Nutrition',
-  description: 'Privacy Policy for Galaxy Nutrition',
+  title: 'سياسة الخصوصية | Dietak دايتك',
+  description: 'Privacy Policy for Dietak',
 }
 
 const SECTIONS = [
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
           <h1 className="text-2xl font-black text-white">
             سياسة الخصوصية <span className="text-white/40 text-lg font-bold">· Privacy Policy</span>
           </h1>
-          <p className="text-white/40 text-sm">Galaxy Nutrition — آخر تحديث: يوليو 2026 · Last updated: July 2026</p>
+          <p className="text-white/40 text-sm">Dietak دايتك — آخر تحديث: يوليو 2026 · Last updated: July 2026</p>
         </div>
 
         {/* Sections */}
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
         ))}
 
         <p className="text-center text-white/25 text-xs pb-6">
-          Galaxy Nutrition · galaxy-nutrition.vercel.app
+          Dietak دايتك · galaxy-nutrition.vercel.app
         </p>
       </div>
     </div>

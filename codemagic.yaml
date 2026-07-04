@@ -9,7 +9,7 @@
 #  3. Codemagic → app settings → iOS code signing:
 #     enable "Automatic" signing with the same App Store Connect key
 #  4. Create the app entry in App Store Connect first:
-#     My Apps → "+" → New App → bundle ID: com.galaxynutrition.app
+#     My Apps → "+" → New App → bundle ID: com.dietak.app
 #  5. Start a build with the "ios-release" workflow → uploads to TestFlight
 # ══════════════════════════════════════════════════════════════════
 
@@ -19,10 +19,10 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: galaxy-asc-key   # name your API key this in Codemagic
+      app_store_connect: dietak-asc-key   # name your API key this in Codemagic
     environment:
       vars:
-        BUNDLE_ID: com.galaxynutrition.app
+        BUNDLE_ID: com.dietak.app
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 20
@@ -30,7 +30,7 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.galaxynutrition.app
+        bundle_identifier: com.dietak.app
     scripts:
       - name: Install npm dependencies
         script: npm ci

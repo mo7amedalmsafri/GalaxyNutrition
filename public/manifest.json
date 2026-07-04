@@ -1,7 +1,7 @@
 {
-  "name": "Galaxy Nutrition | تغذية المجرة",
-  "short_name": "Galaxy Nutrition",
-  "description": "تطبيق ذكي لتتبع التغذية وإدارة الوزن",
+  "name": "Dietak | دايتك",
+  "short_name": "Dietak",
+  "description": "دايتك — تطبيق ذكي لتتبع التغذية وإدارة الوزن",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0014",

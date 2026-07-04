@@ -39,7 +39,7 @@ const OPENROUTER_HEADERS = (key: string) => ({
   'Authorization': `Bearer ${key}`,
   'Content-Type':  'application/json',
   'HTTP-Referer':  'https://galaxy-nutrition.vercel.app',
-  'X-Title':       'Galaxy Nutrition',
+  'X-Title':       'Dietak',
 })
 
 async function tryEndpoint(

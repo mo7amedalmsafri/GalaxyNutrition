@@ -74,7 +74,7 @@ function SuccessContent() {
                 WebkitTextFillColor:  'transparent',
               }}
             >
-              Galaxy Pro ⭐
+              Dietak Pro ⭐
             </span>
           </h1>
           <p className="text-white/50 text-sm leading-relaxed">
