@@ -13,12 +13,10 @@ export default function Logo({ size = 80 }: { size?: number }) {
           <stop offset="0%" stopColor="#1a0533" />
           <stop offset="100%" stopColor="#0a0014" />
         </radialGradient>
-        <linearGradient id="armGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f59e0b" />
-          <stop offset="45%" stopColor="#ec4899" />
-          <stop offset="100%" stopColor="#6b21a8" />
+        <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#97E325" />
+          <stop offset="100%" stopColor="#00D4FF" />
         </linearGradient>
-        {/* د tail: its own softer cyan→violet gradient */}
         <linearGradient id="dalGrad" x1="100%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#06b6d4" />
           <stop offset="100%" stopColor="#8b5cf6" />
@@ -51,36 +49,39 @@ export default function Logo({ size = 80 }: { size?: number }) {
       <circle
         cx="50" cy="50" r="47"
         fill="none"
-        stroke="url(#armGrad)"
+        stroke="url(#brandGrad)"
         strokeWidth="1.5"
-        strokeOpacity="0.65"
+        strokeOpacity="0.5"
       />
 
       {/* Subtle inner glow */}
-      <circle cx="50" cy="50" r="30" fill="#6b21a8" fillOpacity="0.07" />
+      <circle cx="50" cy="50" r="30" fill="#00D4FF" fillOpacity="0.05" />
 
-      {/* ── Full Latin D (strong) ── */}
-      {/* Stem: solid left vertical, same weight as the bowl */}
+      {/* ── Progress-ring D ── */}
+      {/* Track: faint full D outline */}
       <path
-        d="M 37,29 C 36,42.5 36,57 37,70"
-        stroke="url(#armGrad)"
+        d="M 36,29 C 35,42.5 35,57 36,70 M 36,29 C 63,23.5 76,36 74.5,50 C 73,64 61.5,72.5 36,70"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth="6"
+        strokeLinecap="round"
+        fill="none"
+      />
+      {/* Progress: stem + most of the bowl, brand green→cyan */}
+      <path
+        d="M 36,70 C 35,57 35,42.5 36,29 C 57.5,24.5 70,31.5 74,43"
+        stroke="url(#brandGrad)"
         strokeWidth="6"
         strokeLinecap="round"
         fill="none"
         filter="url(#glow)"
       />
-      {/* Bowl: from stem top, bulging right, back to stem bottom */}
+      {/* Progress endpoint: glowing star dot */}
+      <circle cx="74" cy="43" r="4.6" fill="url(#starGrad)" filter="url(#outerGlow)" />
+      <circle cx="74" cy="43" r="2" fill="white" opacity="0.95" />
+
+      {/* د tail: baseline sweeping left, cyan→violet */}
       <path
-        d="M 37,29 C 63,23.5 76,36 74.5,50 C 73,64 61.5,72.5 37,70"
-        stroke="url(#armGrad)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        fill="none"
-        filter="url(#glow)"
-      />
-      {/* د tail (lighter, different gradient): baseline sweeping left like د's base */}
-      <path
-        d="M 37,70 C 31,69.8 25.5,68 20.5,64"
+        d="M 36,70 C 30,69.8 25,68 20.5,64"
         stroke="url(#dalGrad)"
         strokeWidth="5"
         strokeLinecap="round"
@@ -89,19 +90,12 @@ export default function Logo({ size = 80 }: { size?: number }) {
         filter="url(#glow)"
       />
 
-      {/* Galaxy star accent above the tip */}
-      <circle cx="52" cy="18" r="5.5" fill="url(#starGrad)" filter="url(#outerGlow)" />
-      <circle cx="52" cy="18" r="2.5" fill="white" opacity="0.95" />
-
       {/* Scattered mini stars */}
-      <circle cx="78" cy="21" r="1.8" fill="#f59e0b" opacity="0.85" />
-      <circle cx="84" cy="58" r="1.2" fill="#ec4899" opacity="0.75" />
-      <circle cx="18" cy="76" r="1.6" fill="#c084fc" opacity="0.7" />
-      <circle cx="76" cy="82" r="1" fill="#f59e0b" opacity="0.6" />
-      <circle cx="19" cy="32" r="1" fill="#06b6d4" opacity="0.65" />
-      <circle cx="66" cy="12" r="1.2" fill="white" opacity="0.55" />
-      <circle cx="11" cy="46" r="1" fill="#ec4899" opacity="0.55" />
-      <circle cx="88" cy="37" r="0.8" fill="white" opacity="0.5" />
+      <circle cx="80" cy="64" r="1.4" fill="#00D4FF" opacity="0.7" />
+      <circle cx="20" cy="32" r="1.2" fill="#97E325" opacity="0.7" />
+      <circle cx="68" cy="14" r="1.2" fill="white" opacity="0.5" />
+      <circle cx="16" cy="76" r="1.4" fill="#8b5cf6" opacity="0.6" />
+      <circle cx="86" cy="26" r="1" fill="#97E325" opacity="0.6" />
     </svg>
   )
 }
