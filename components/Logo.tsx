@@ -18,6 +18,10 @@ export default function Logo({ size = 80 }: { size?: number }) {
           <stop offset="45%" stopColor="#ec4899" />
           <stop offset="100%" stopColor="#6b21a8" />
         </linearGradient>
+        <linearGradient id="stemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#6b21a8" stopOpacity="0.5" />
+        </linearGradient>
         <radialGradient id="starGrad" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="50%" stopColor="#fbbf24" />
@@ -54,39 +58,40 @@ export default function Logo({ size = 80 }: { size?: number }) {
       {/* Subtle inner glow */}
       <circle cx="50" cy="50" r="30" fill="#6b21a8" fillOpacity="0.07" />
 
-      {/* ── Arabic letter غ as galaxy arms ── */}
-      {/* Main sweeping arc (body of غ) */}
+      {/* ── Hybrid د / D — one continuous stroke ── */}
+      {/* Tip (like د's start) → right-bulging bowl (D) → baseline tail gliding left (د) */}
       <path
-        d="M 30,42 C 14,40 11,56 22,66 C 33,76 54,77 66,64 C 74,54 70,40 60,40"
+        d="M 38,28 C 62,23 76,36 74,50 C 72,64 60,71 36,69.5 C 30,69 25,67.5 20.5,64.5"
         stroke="url(#armGrad)"
         strokeWidth="6"
         strokeLinecap="round"
         fill="none"
         filter="url(#glow)"
       />
-      {/* Hook stroke (right upstroke of غ) */}
+      {/* Subtle D stem hint */}
       <path
-        d="M 60,40 C 66,32 62,23 53,26"
-        stroke="url(#armGrad)"
-        strokeWidth="5.5"
+        d="M 36,31.5 C 34.8,43 34.4,55 35.6,66.5"
+        stroke="url(#stemGrad)"
+        strokeWidth="2.3"
         strokeLinecap="round"
         fill="none"
+        opacity="0.55"
         filter="url(#glow)"
       />
 
-      {/* Nukta of غ → glowing star */}
-      <circle cx="36" cy="24" r="5.5" fill="url(#starGrad)" filter="url(#outerGlow)" />
-      <circle cx="36" cy="24" r="2.5" fill="white" opacity="0.95" />
+      {/* Galaxy star accent above the tip */}
+      <circle cx="52" cy="18" r="5.5" fill="url(#starGrad)" filter="url(#outerGlow)" />
+      <circle cx="52" cy="18" r="2.5" fill="white" opacity="0.95" />
 
       {/* Scattered mini stars */}
-      <circle cx="76" cy="19" r="1.8" fill="#f59e0b" opacity="0.85" />
-      <circle cx="83" cy="58" r="1.2" fill="#ec4899" opacity="0.75" />
+      <circle cx="78" cy="21" r="1.8" fill="#f59e0b" opacity="0.85" />
+      <circle cx="84" cy="58" r="1.2" fill="#ec4899" opacity="0.75" />
       <circle cx="18" cy="76" r="1.6" fill="#c084fc" opacity="0.7" />
-      <circle cx="79" cy="80" r="1" fill="#f59e0b" opacity="0.6" />
-      <circle cx="20" cy="30" r="1" fill="#06b6d4" opacity="0.65" />
-      <circle cx="68" cy="12" r="1.2" fill="white" opacity="0.55" />
-      <circle cx="11" cy="44" r="1" fill="#ec4899" opacity="0.55" />
-      <circle cx="88" cy="35" r="0.8" fill="white" opacity="0.5" />
+      <circle cx="76" cy="82" r="1" fill="#f59e0b" opacity="0.6" />
+      <circle cx="19" cy="32" r="1" fill="#06b6d4" opacity="0.65" />
+      <circle cx="66" cy="12" r="1.2" fill="white" opacity="0.55" />
+      <circle cx="11" cy="46" r="1" fill="#ec4899" opacity="0.55" />
+      <circle cx="88" cy="37" r="0.8" fill="white" opacity="0.5" />
     </svg>
   )
 }
