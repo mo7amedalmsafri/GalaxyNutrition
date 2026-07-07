@@ -38,8 +38,16 @@ workflows:
       - name: Sync Capacitor iOS project
         script: npx cap sync ios
 
-      - name: Set up code signing
-        script: xcode-project use-profiles
+      - name: Set up automatic code signing
+        script: |
+          # Codemagic creates the distribution certificate + provisioning
+          # profile automatically using the App Store Connect API key.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Increment build number
         script: |
