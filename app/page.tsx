@@ -818,6 +818,31 @@ export default function Dashboard() {
               <span style={{ color: 'rgba(151,227,37,0.45)', fontSize: '16px' }}>›</span>
             </button>
           </div>
+
+          {/* ── Subscription / Dietak Pro ── (Apple Pay when in the iOS app) */}
+          <div className="mt-2">
+            <button
+              onClick={() => { router.push('/settings#pro'); setShowDrawer(false) }}
+              className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl transition-all active:scale-[0.97]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(251,191,36,0.08))',
+                border: '1px solid rgba(245,158,11,0.4)',
+              }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.35), rgba(251,191,36,0.18))' }}>
+                <Star size={16} color="#f59e0b" fill="#f59e0b" />
+              </div>
+              <span className="flex-1 text-start">
+                <span className="block text-sm font-black" style={{ color: '#f59e0b' }}>
+                  {t('اشترك في Dietak Pro', 'Subscribe to Dietak Pro')}
+                </span>
+                <span className="block text-[11px]" style={{ color: 'rgba(245,158,11,0.6)' }}>
+                  {t('مزايا كاملة بلا حدود', 'Unlock everything')}
+                </span>
+              </span>
+              <span style={{ color: 'rgba(245,158,11,0.5)', fontSize: '16px' }}>›</span>
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
