@@ -37,13 +37,14 @@ workflows:
 
       - name: Set up code signing certificate
         script: |
-          # Bring the distribution certificate into the keychain. Xcode
-          # itself will create/download the provisioning profile during the
-          # archive step below (-allowProvisioningUpdates), using the
-          # App Store Connect API key from the integration + DEVELOPMENT_TEAM.
+          # Use a persistent private key (stored as the CERTIFICATE_PRIVATE_KEY
+          # env var in Codemagic) so the distribution certificate + its private
+          # key survive across builds. Xcode auto-creates the provisioning
+          # profile during archive (-allowProvisioningUpdates).
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY" \
             --create
           keychain add-certificates
 
