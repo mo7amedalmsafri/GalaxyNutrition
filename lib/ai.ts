@@ -29,12 +29,10 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-flash-lite-latest'
 
-// OpenRouter free models (vision-capable), tried in order
-const OPENROUTER_FREE = [
-  'google/gemma-4-31b-it:free',
-  'google/gemma-4-26b-a4b-it:free',
-  'nvidia/nemotron-nano-12b-v2-vl:free',
-]
+// نماذج OpenRouter المجانية — احتياطية اختيارية. أغلبها 404/429 وغير موثوقة،
+// وGemini المجاني يغطّي هذه الحاجة، لذا نتركها فارغة ونعتمد Gemini ثم المدفوع.
+// لإعادة تفعيل نموذج مجاني معيّن، أضِف اسمه هنا.
+const OPENROUTER_FREE: string[] = []
 const OPENROUTER_PAID = 'google/gemini-2.5-flash-lite'
 
 const OPENROUTER_HEADERS = (key: string) => ({
