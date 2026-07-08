@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { Sparkles, Loader2, Dumbbell, Trash2, RefreshCw, X } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import ProUpsell from '@/components/ProUpsell'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useUserEmail } from '@/lib/store'
-import { canUseFeature, recordFeatureUse } from '@/lib/limits'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useEntitlement } from '@/lib/store'
 
 // الرياضات المتاحة للاختيار
 const SPORTS = [
@@ -45,7 +44,7 @@ function defaultGoal(goal?: string) {
 
 export default function WorkoutPlanGenerator() {
   const t = useT()
-  const email = useUserEmail()
+  const ent = useEntitlement()
   const [profile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const lang = profile.language ?? 'ar'
   const [blocked, setBlocked] = useState(false)
@@ -79,7 +78,7 @@ export default function WorkoutPlanGenerator() {
 
   const generate = async () => {
     if (loading) return
-    if (!canUseFeature('workoutPlan', email)) { setBlocked(true); return }
+    if (!ent.allowed) { setBlocked(true); return }
     setLoading(true); setError(''); setBlocked(false)
     try {
       const res = await fetch('/api/generate-workout', {
@@ -99,7 +98,6 @@ export default function WorkoutPlanGenerator() {
         return
       }
       setSaved({ plan: data.plan, createdAt: new Date().toISOString() })
-      recordFeatureUse('workoutPlan')   // احتسب استخداماً بعد النجاح
       setShowForm(false)
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === 'TimeoutError'
@@ -312,7 +310,7 @@ export default function WorkoutPlanGenerator() {
           </div>
 
           {error && <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>}
-          {blocked && <ProUpsell text={t('انتهت خطتك المجانية هذا الأسبوع — اشترك لخطط غير محدودة', 'Free plan used this week — subscribe for unlimited plans')} />}
+          {blocked && <ProUpsell text={t('انتهت تجربتك المجانية — اشترك لتوليد خطط التمارين', 'Your free trial ended — subscribe to generate training plans')} />}
 
           <button onClick={generate} disabled={loading}
             className="btn-galaxy w-full py-3.5 flex items-center justify-center gap-2 disabled:opacity-50">

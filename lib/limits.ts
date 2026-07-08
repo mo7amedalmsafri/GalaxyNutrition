@@ -107,6 +107,27 @@ export function remainingFeature(f: Feature, email?: string | null): number | '�
   return Math.max(0, FREE_LIMITS[f].limit - getFeatureUsage(f))
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🕑 التجربة المجانية — كل الميزات المدفوعة مجانية لأول يومين من الحساب
+//  عدّل TRIAL_DAYS للتحكم بمدة التجربة
+// ══════════════════════════════════════════════════════════════════
+export const TRIAL_DAYS = 2
+
+/** الأيام المتبقّية من التجربة (يعتمد على تاريخ إنشاء الحساب من الخادم) */
+export function trialDaysLeft(createdAtISO?: string | null): number {
+  if (!createdAtISO) return TRIAL_DAYS   // قبل تحميل التاريخ لا نقفل (fail-open)
+  const created = new Date(createdAtISO).getTime()
+  if (isNaN(created)) return 0
+  const elapsed = (Date.now() - created) / 86_400_000
+  return Math.max(0, Math.ceil(TRIAL_DAYS - elapsed))
+}
+
+/** هل للمستخدم وصول للميزات المدفوعة؟ (Pro/مشرف أو ما زال ضمن التجربة) */
+export function hasPremiumAccess(email?: string | null, createdAtISO?: string | null): boolean {
+  if (isProUser(email)) return true
+  return trialDaysLeft(createdAtISO) > 0
+}
+
 // ── Scan limits ───────────────────────────────────────────────────────
 function readScanStore(): { date: string; count: number } | null {
   if (typeof window === 'undefined') return null

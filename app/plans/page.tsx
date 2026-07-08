@@ -6,7 +6,7 @@ import GlassCard from '@/components/GlassCard'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { savePlan, getPlans, deletePlan, WorkoutPlan } from '@/lib/db'
 import { createClient } from '@/lib/supabase/client'
-import { canGeneratePlan, daysUntilNextPlan, recordPlanGenerated } from '@/lib/limits'
+import { hasPremiumAccess } from '@/lib/limits'
 
 const GOAL_LABELS: Record<string, { ar: string; en: string; color: string }> = {
   lose:     { ar: 'إنقاص الوزن',      en: 'Weight Loss',     color: '#06b6d4' },
@@ -52,15 +52,17 @@ export default function PlansPage() {
 
   // freemium
   const [userEmail,        setUserEmail]        = useState<string | null>(null)
+  const [createdAt,        setCreatedAt]        = useState<string | null>(null)
   const [showPlanLimitMsg, setShowPlanLimitMsg] = useState(false)
 
   const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { getPlans().then(setPlans) }, [])
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) =>
+    createClient().auth.getUser().then(({ data }) => {
       setUserEmail(data.user?.email ?? null)
-    )
+      setCreatedAt(data.user?.created_at ?? null)
+    })
   }, [])
   useEffect(() => {
     textRef.current?.scrollTo({ top: textRef.current.scrollHeight, behavior: 'smooth' })
@@ -81,8 +83,8 @@ export default function PlansPage() {
 
   // ── Generate ──────────────────────────────────────────────────────────────
   const generate = async () => {
-    // ── Limit check ──
-    if (!canGeneratePlan(userEmail)) {
+    // ── Trial/subscription check ──
+    if (!hasPremiumAccess(userEmail, createdAt)) {
       setShowPlanLimitMsg(true)
       return
     }
@@ -125,7 +127,6 @@ export default function PlansPage() {
         plan_content: full,
       })
       if (saved) setPlans(prev => [saved, ...prev])
-      recordPlanGenerated()   // سجّل التاريخ بعد النجاح
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('حدث خطأ غير متوقع', 'Unexpected error'))
     } finally { setStreaming(false) }
@@ -210,31 +211,19 @@ export default function PlansPage() {
           style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.28)' }}
         >
           <div className="flex items-center gap-2">
-            <span className="text-lg">⏳</span>
+            <span className="text-lg">✨</span>
             <p className="font-bold text-sm" style={{ color: '#f59e0b' }}>
-              {t('وصلت للحد الأسبوعي', 'Weekly limit reached')}
+              {t('انتهت تجربتك المجانية', 'Your free trial ended')}
             </p>
           </div>
           <p className="text-xs text-white/55 leading-relaxed">
-            {t(
-              `يمكنك توليد خطة واحدة كل أسبوع مجاناً. يمكنك توليد خطة جديدة بعد ${daysUntilNextPlan(userEmail)} ${daysUntilNextPlan(userEmail) === 1 ? 'يوم' : 'أيام'}.`,
-              `You can generate one plan per week for free. Next plan available in ${daysUntilNextPlan(userEmail)} ${daysUntilNextPlan(userEmail) === 1 ? 'day' : 'days'}.`
-            )}
+            {t('اشترك في Dietak Pro لتوليد خطط غذائية غير محدودة.',
+               'Subscribe to Dietak Pro to generate unlimited nutrition plans.')}
           </p>
-          <div className="flex items-center gap-1.5 mt-1">
-            <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(245,158,11,0.15)' }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  background: '#f59e0b',
-                  width: `${Math.min(100, ((7 - daysUntilNextPlan(userEmail)) / 7) * 100)}%`,
-                }}
-              />
-            </div>
-            <span className="text-[10px] font-bold" style={{ color: '#f59e0b' }}>
-              {7 - daysUntilNextPlan(userEmail)}/7 {t('أيام', 'days')}
-            </span>
-          </div>
+          <a href="/settings#pro" className="text-xs font-bold px-3 py-2 rounded-lg text-center"
+            style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+            {t('اشترك الآن ✨', 'Subscribe now ✨')}
+          </a>
         </div>
       )}
 
@@ -252,8 +241,8 @@ export default function PlansPage() {
           </>
         ) : showPlanLimitMsg ? (
           <>
-            <span>⏳</span>
-            {t(`بعد ${daysUntilNextPlan(userEmail)} أيام`, `In ${daysUntilNextPlan(userEmail)} days`)}
+            <span>✨</span>
+            {t('اشترك للمتابعة', 'Subscribe to continue')}
           </>
         ) : (
           <>

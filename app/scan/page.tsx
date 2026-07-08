@@ -9,7 +9,7 @@ import { getTodayDate } from '@/lib/utils'
 import { useT, useLang, useLocalStorage, StoredProfile, DEFAULT_PROFILE } from '@/lib/store'
 import { XP_REWARDS, capDailyXp } from '@/lib/gamification'
 import { createClient } from '@/lib/supabase/client'
-import { canScan, remainingScans, incrementScanCount, FREE_DAILY_SCANS } from '@/lib/limits'
+import { hasPremiumAccess, trialDaysLeft, isProUser } from '@/lib/limits'
 
 type ScanState = 'idle' | 'preview' | 'analyzing' | 'results' | 'error'
 
@@ -19,11 +19,13 @@ export default function ScanPage() {
   const [, setProfile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const [state, setState] = useState<ScanState>('idle')
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [createdAt, setCreatedAt] = useState<string | null>(null)
   const [showLimitModal, setShowLimitModal] = useState(false)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       setUserEmail(data.user?.email ?? null)
+      setCreatedAt(data.user?.created_at ?? null)
     })
   }, [])
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -183,8 +185,8 @@ export default function ScanPage() {
   const analyzeImage = async () => {
     if (!imageBase64) return
 
-    // ── Limit check ──
-    if (!canScan(userEmail)) {
+    // ── Trial/subscription check ──
+    if (!hasPremiumAccess(userEmail, createdAt)) {
       setShowLimitModal(true)
       return
     }
@@ -198,7 +200,6 @@ export default function ScanPage() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'فشل التحليل')
-      incrementScanCount()   // سجّل الاستخدام بعد النجاح فقط
       setDetectedFoods(data.detectedFoods || [])
       setMealDescription(data.mealDescription || '')
       setState('results')
@@ -279,13 +280,15 @@ export default function ScanPage() {
             </h1>
             <p className="text-white/40 text-sm mt-1">{t('صوّر وجبتك ودع الذكاء الاصطناعي يحللها', 'Snap your meal and let AI analyze it')}</p>
           </div>
-          {/* شارة التحليلات المتبقية */}
+          {/* شارة حالة التجربة/الاشتراك */}
           <div className="flex flex-col items-center px-3 py-2 rounded-2xl flex-shrink-0"
             style={{ background: 'rgba(107,33,168,0.15)', border: '1px solid rgba(107,33,168,0.3)' }}>
             <span className="text-lg font-black" style={{ color: '#c084fc' }}>
-              {remainingScans(userEmail)}
+              {isProUser(userEmail) ? '∞' : trialDaysLeft(createdAt)}
             </span>
-            <span className="text-[10px] text-white/40">{t('متبقي', 'left')}</span>
+            <span className="text-[10px] text-white/40">
+              {isProUser(userEmail) ? 'Pro' : t('يوم تجربة', 'trial days')}
+            </span>
           </div>
         </div>
       </div>
@@ -719,14 +722,11 @@ export default function ScanPage() {
               </div>
               <div>
                 <h3 className="text-xl font-black text-white">
-                  {t('وصلت الحد اليومي', 'Daily Limit Reached')}
+                  {t('انتهت تجربتك المجانية', 'Your Free Trial Ended')}
                 </h3>
                 <p className="text-white/50 text-sm mt-1">
-                  {t(`استخدمت ${FREE_DAILY_SCANS}/${FREE_DAILY_SCANS} تحليلات اليوم`,
-                     `You've used ${FREE_DAILY_SCANS}/${FREE_DAILY_SCANS} free scans today`)}
-                </p>
-                <p className="text-white/30 text-xs mt-1">
-                  {t('يتجدد الحد غداً تلقائياً', 'Limit resets tomorrow automatically')}
+                  {t('اشترك في Dietak Pro لمواصلة تحليل الوجبات بالكاميرا',
+                     'Subscribe to Dietak Pro to keep analyzing meals with the camera')}
                 </p>
               </div>
             </div>

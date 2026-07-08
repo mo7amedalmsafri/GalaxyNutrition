@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { isProUser, trialDaysLeft, hasPremiumAccess } from '@/lib/limits'
 
 /** بريد المستخدم الحالي (لفحص حالة الاشتراك/المشرف) — null قبل التحميل أو بلا جلسة */
 export function useUserEmail(): string | null {
@@ -9,6 +10,28 @@ export function useUserEmail(): string | null {
     createClient().auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null)).catch(() => {})
   }, [])
   return email
+}
+
+/**
+ * حالة الاشتراك/التجربة للمستخدم الحالي.
+ * allowed = مسموح بالميزات المدفوعة (Pro/مشرف أو ضمن تجربة اليومين).
+ */
+export function useEntitlement() {
+  const [s, setS] = useState<{ loading: boolean; email: string | null; createdAt: string | null }>({
+    loading: true, email: null, createdAt: null,
+  })
+  useEffect(() => {
+    createClient().auth.getUser()
+      .then(({ data }) => setS({ loading: false, email: data.user?.email ?? null, createdAt: data.user?.created_at ?? null }))
+      .catch(() => setS(prev => ({ ...prev, loading: false })))
+  }, [])
+  return {
+    loading: s.loading,
+    email: s.email,
+    isPro: isProUser(s.email),
+    daysLeft: trialDaysLeft(s.createdAt),
+    allowed: hasPremiumAccess(s.email, s.createdAt),
+  }
 }
 
 export function useLocalStorage<T>(

@@ -856,7 +856,7 @@ export default function Dashboard() {
               <User size={17} color="rgba(151,227,37,0.8)" className="flex-shrink-0" />
               <span className="text-sm font-semibold flex-1 text-start"
                 style={{ color: 'rgba(151,227,37,0.9)' }}>
-                {t('الملف الشخصي الكامل', 'Full Profile')}
+                {t('الإعدادات', 'Settings')}
               </span>
               <span style={{ color: 'rgba(151,227,37,0.45)', fontSize: '16px' }}>›</span>
             </button>

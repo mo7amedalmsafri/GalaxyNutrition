@@ -6,8 +6,7 @@ import { FoodDBItem, searchFoods, getPopularFoods } from '@/lib/foodDatabase'
 import FoodEntryModal from './FoodEntryModal'
 import { FoodItem } from '@/lib/types'
 import { SavedMeal } from '@/lib/savedMeals'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useUserEmail } from '@/lib/store'
-import { canUseFeature, recordFeatureUse } from '@/lib/limits'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useEntitlement } from '@/lib/store'
 import ProUpsell from './ProUpsell'
 
 interface FoodSearchBarProps {
@@ -18,7 +17,7 @@ interface FoodSearchBarProps {
 
 export default function FoodSearchBar({ onAddFood, saved = [], onRemoveSaved }: FoodSearchBarProps) {
   const t = useT()
-  const email = useUserEmail()
+  const ent = useEntitlement()
   const [profile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const L    = (profile.theme    ?? 'dark') === 'light'
   const lang = profile.language  ?? 'ar'
@@ -45,7 +44,7 @@ export default function FoodSearchBar({ onAddFood, saved = [], onRemoveSaved }: 
   const calcWithAI = async () => {
     const foodName = query.trim()
     if (!foodName || aiLoading) return
-    if (!canUseFeature('aiCalc', email)) { setAiBlocked(true); return }
+    if (!ent.allowed) { setAiBlocked(true); return }
     setAiLoading(true)
     setAiError('')
     setAiBlocked(false)
@@ -83,7 +82,6 @@ export default function FoodSearchBar({ onAddFood, saved = [], onRemoveSaved }: 
         sodium: r(n.sodium),
         potassium: r(n.potassium),
       } as FoodDBItem)
-      recordFeatureUse('aiCalc')   // احتسب استخداماً بعد النجاح
       setIsOpen(false)
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === 'TimeoutError'
@@ -231,7 +229,7 @@ export default function FoodSearchBar({ onAddFood, saved = [], onRemoveSaved }: 
                   </span>
                 </button>
                 {aiError && <p className="text-xs px-1 mb-2" style={{ color: '#ef4444' }}>{aiError}</p>}
-                {aiBlocked && <div className="mb-2"><ProUpsell text={t('انتهت حصتك المجانية اليوم — اشترك للحساب غير المحدود', 'Free AI calculations used up today — subscribe for unlimited')} /></div>}
+                {aiBlocked && <div className="mb-2"><ProUpsell text={t('انتهت تجربتك المجانية — اشترك لمواصلة الحساب بالذكاء', 'Your free trial ended — subscribe to keep calculating with AI')} /></div>}
               </>
             )}
             <p className="text-xs text-white/35 px-1 mb-2">

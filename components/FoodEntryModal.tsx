@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X, ChevronDown, ChevronUp, Sparkles, Loader2, ScanBarcode } from 'lucide-react'
 import { NutritionData, FoodItem } from '@/lib/types'
 import { searchFoods, FoodDBItem } from '@/lib/foodDatabase'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useUserEmail } from '@/lib/store'
-import { canUseFeature, recordFeatureUse, remainingFeature } from '@/lib/limits'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useEntitlement } from '@/lib/store'
 import BarcodeScanner from './BarcodeScanner'
 import ProUpsell from './ProUpsell'
 
@@ -77,7 +76,7 @@ export default function FoodEntryModal({
   onClose,
 }: FoodEntryModalProps) {
   const t    = useT()
-  const email = useUserEmail()
+  const ent  = useEntitlement()
   const [profile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const L    = (profile.theme    ?? 'dark') === 'light'
   const lang = profile.language  ?? 'ar'
@@ -137,8 +136,8 @@ export default function FoodEntryModal({
   const calcWithAI = async () => {
     const foodName = name.trim()
     if (!foodName || aiLoading) return
-    // قفل الاشتراك: حساب السعرات بالذكاء محدود مجاناً
-    if (!canUseFeature('aiCalc', email)) { setAiBlocked(true); return }
+    // قفل الاشتراك: بعد تجربة اليومين يحتاج اشتراك
+    if (!ent.allowed) { setAiBlocked(true); return }
     setAiLoading(true)
     setAiError('')
     setAiBlocked(false)
@@ -169,7 +168,6 @@ export default function FoodEntryModal({
         sodium: r1((n.sodium ?? 0) * f),
         potassium: r1((n.potassium ?? 0) * f),
       })
-      recordFeatureUse('aiCalc')   // احتسب استخداماً بعد النجاح فقط
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === 'TimeoutError'
       setAiError(timedOut
@@ -419,7 +417,7 @@ export default function FoodEntryModal({
               </button>
             )}
             {aiError && <p className="text-xs mt-1.5 px-1" style={{ color: '#ef4444' }}>{aiError}</p>}
-            {aiBlocked && <ProUpsell text={t('انتهت حصتك المجانية اليوم لحساب السعرات — اشترك للاستخدام غير المحدود', 'You\'ve used your free AI calculations today — subscribe for unlimited')} />}
+            {aiBlocked && <ProUpsell text={t('انتهت تجربتك المجانية — اشترك لمواصلة استخدام الذكاء الاصطناعي', 'Your free trial ended — subscribe to keep using AI')} />}
 
             {/* Result badge — total calories + derived grams */}
             {hasValues && name.trim() && (
