@@ -27,6 +27,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFood, setSelectedFood] = useState<FoodDBItem | null>(null)
+  const [aiQuantity, setAiQuantity] = useState<number | undefined>(undefined)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -42,11 +43,18 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
       const res = await fetch('/api/recalculate-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ foodName, estimatedWeight: 100, language: lang }),
+        // بلا وزن صريح — يقدّره الذكاء من النص («ملعقة عسل» = ملعقة، ليس 100جم)
+        body: JSON.stringify({ foodName, language: lang }),
       })
       if (!res.ok) throw new Error('failed')
       const data = await res.json()
       const n = data.nutrition ?? {}
+      // الوزن الفعلي للكمية الموصوفة — تُفتح النافذة على هذه الكمية
+      if (typeof data.totalGrams === 'number' && data.totalGrams > 0) {
+        setAiQuantity(data.totalGrams)
+      } else {
+        setAiQuantity(100)
+      }
       setSelectedFood({
         id: 'ai-' + Date.now(),
         name: data.name ?? foodName,
@@ -184,6 +192,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
       {selectedFood && (
         <FoodEntryModal
           initialName={selectedFood.nameAr}
+          initialQuantity={aiQuantity}
           initialNutrition={{
             calories: selectedFood.calories,
             protein: selectedFood.protein,

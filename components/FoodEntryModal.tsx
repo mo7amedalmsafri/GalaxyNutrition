@@ -137,7 +137,8 @@ export default function FoodEntryModal({
       const res = await fetch('/api/recalculate-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ foodName, estimatedWeight: 100, language: lang }),
+        // بلا وزن صريح — يقدّره الذكاء من النص («ملعقة عسل» = ملعقة، ليس 100جم)
+        body: JSON.stringify({ foodName, language: lang }),
       })
       if (!res.ok) throw new Error('failed')
       const data = await res.json()
@@ -154,6 +155,10 @@ export default function FoodEntryModal({
         sodium: n.sodium ?? 0,
         potassium: n.potassium ?? 0,
       })
+      // اضبط الكمية على الوزن الفعلي للكمية الموصوفة (ملعقة، كوب…)
+      if (typeof data.totalGrams === 'number' && data.totalGrams > 0) {
+        setQuantity(data.totalGrams)
+      }
     } catch {
       setAiError(t('تعذّر الحساب — تأكد من الاتصال وحاول مرة أخرى', 'Could not calculate — check your connection and try again'))
     } finally {
