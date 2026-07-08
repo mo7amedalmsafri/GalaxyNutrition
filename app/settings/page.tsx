@@ -6,6 +6,7 @@ import {
   User, Target, Bell, Moon, Sun, ChevronLeft, Info, Ruler,
   Calendar, Sparkles, Droplets, LogOut, Flame,
   Dumbbell, Wheat, Languages, Check, Weight,
+  AtSign, MessageSquare, FileText, Shield, Inbox, Loader2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { saveProfileToSupabase } from '@/lib/db'
@@ -206,6 +207,44 @@ export default function SettingsPage() {
   }, [storedProfile.name, storedProfile.theme, storedProfile.notifications, storedProfile.language])
 
   const set = (patch: Partial<StoredProfile>) => setLocal(p => ({ ...p, ...patch }))
+
+  // ── Username ─────────────────────────────────────────────────────
+  const [username, setUsername]       = useState('')          // المحفوظ
+  const [usernameInput, setUsernameInput] = useState('')      // الحقل
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [usernameError, setUsernameError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/username')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.username) { setUsername(d.username); setUsernameInput(d.username) } })
+      .catch(() => {})
+  }, [])
+
+  const saveUsername = async () => {
+    const val = usernameInput.trim().toLowerCase()
+    if (usernameStatus === 'saving' || val === username) return
+    setUsernameStatus('saving'); setUsernameError('')
+    try {
+      const res = await fetch('/api/username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: val }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setUsernameError(d.error || t('تعذّر الحفظ', 'Could not save'))
+        setUsernameStatus('idle')
+        return
+      }
+      setUsername(d.username); setUsernameInput(d.username)
+      setUsernameStatus('saved')
+      setTimeout(() => setUsernameStatus('idle'), 2000)
+    } catch {
+      setUsernameError(t('تعذّر الاتصال', 'Connection failed'))
+      setUsernameStatus('idle')
+    }
+  }
 
   // ── Derived ─────────────────────────────────────────────────────
   const bmi      = calculateBMI(local.weight, local.height)
@@ -450,6 +489,74 @@ export default function SettingsPage() {
           <span className="text-xs text-white/30 flex-shrink-0">v1.0.0</span>
           <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" />
         </button>
+      </SettingsSection>
+
+      {/* ── Username ── */}
+      <SettingsSection title={t('اسم المستخدم', 'Username')}>
+        <div className="px-4 py-3.5">
+          <div className="flex items-center gap-2">
+            <AtSign size={17} color="rgba(0,212,255,0.7)" className="flex-shrink-0" />
+            <input
+              value={usernameInput}
+              onChange={e => { setUsernameInput(e.target.value); setUsernameError('') }}
+              placeholder={t('اختر اسماً (٤ أحرف فأكثر)', 'Pick a name (4+ chars)')}
+              maxLength={20}
+              autoCapitalize="none"
+              spellCheck={false}
+              className="galaxy-input flex-1 px-3 py-2 text-sm"
+              dir="ltr"
+              style={{ textAlign: isEn ? 'left' : 'right' }}
+            />
+            <button
+              onClick={saveUsername}
+              disabled={usernameStatus === 'saving' || usernameInput.trim().toLowerCase() === username || usernameInput.trim().length < 4}
+              className="text-xs px-3 py-2 rounded-lg font-bold flex-shrink-0 transition-all active:scale-95 disabled:opacity-40"
+              style={{ background: 'rgba(151,227,37,0.14)', color: '#97E325', border: '1px solid rgba(151,227,37,0.3)' }}
+            >
+              {usernameStatus === 'saving'
+                ? <Loader2 size={14} className="animate-spin" />
+                : usernameStatus === 'saved' ? t('✓ تم', '✓ Done') : t('حفظ', 'Save')}
+            </button>
+          </div>
+          {usernameError
+            ? <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{usernameError}</p>
+            : <p className="text-xs mt-2 text-white/35">
+                {t('اسم فريد يظهر عند تواصلك معنا. أحرف وأرقام بلا مسافات.',
+                   'A unique name shown when you contact us. Letters & numbers, no spaces.')}
+              </p>}
+        </div>
+      </SettingsSection>
+
+      {/* ── Support & Legal ── */}
+      <SettingsSection title={t('الدعم والقانوني', 'Support & Legal')}>
+        <button onClick={() => router.push('/contact')}
+          className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+          <MessageSquare size={18} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />
+          <span className="text-sm text-white/70 flex-1 text-start">{t('تواصل معنا', 'Contact Us')}</span>
+          <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
+        </button>
+        <button onClick={() => router.push('/terms')}
+          className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+          <FileText size={18} color="rgba(0,212,255,0.7)" className="flex-shrink-0" />
+          <span className="text-sm text-white/70 flex-1 text-start">{t('الشروط والأحكام', 'Terms & Conditions')}</span>
+          <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
+        </button>
+        <button onClick={() => router.push('/privacy')}
+          className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+          <Shield size={18} color="rgba(192,132,252,0.7)" className="flex-shrink-0" />
+          <span className="text-sm text-white/70 flex-1 text-start">{t('سياسة الخصوصية', 'Privacy Policy')}</span>
+          <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
+        </button>
+        {isAdmin(userEmail) && (
+          <button onClick={() => router.push('/admin/messages')}
+            className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+            <Inbox size={18} color="#f59e0b" className="flex-shrink-0" />
+            <span className="text-sm flex-1 text-start font-semibold" style={{ color: '#f59e0b' }}>
+              {t('رسائل المستخدمين (مشرف)', 'User Messages (Admin)')}
+            </span>
+            <ChevronLeft size={15} color="rgba(245,158,11,0.4)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
+          </button>
+        )}
       </SettingsSection>
 
       {/* ── Dietak Pro ── */}
