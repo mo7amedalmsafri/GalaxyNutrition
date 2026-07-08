@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aiChat, extractJson } from '@/lib/ai'
 
+// نمنح الدالة وقتاً كافياً على Vercel حتى لا تُقطع قبل رد الذكاء الاصطناعي
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   try {
     const { foodName, estimatedWeight, language = 'ar' } = await req.json()
@@ -57,7 +60,7 @@ Important: "totalGrams" = the real total weight in grams of the described amount
 
     const content = await aiChat(
       [{ role: 'user', content: prompt }],
-      { maxTokens: 500, temperature: 0.1 }
+      { maxTokens: 500, temperature: 0.1, timeoutMs: 12000 }
     )
 
     if (!content) {

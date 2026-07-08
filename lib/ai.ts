@@ -20,6 +20,8 @@ export interface AiMessage {
 interface AiOptions {
   maxTokens?:   number
   temperature?: number
+  /** أقصى مهلة لكل مزوّد بالمللي ثانية (افتراضي 15 ثانية). يمنع التعليق الطويل. */
+  timeoutMs?:   number
 }
 
 const GEMINI_URL     = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
@@ -57,12 +59,14 @@ async function tryEndpoint(
         max_tokens:  opts.maxTokens ?? 1000,
         temperature: opts.temperature ?? 0.2,
       }),
+      // مهلة لكل مزوّد — إذا علّق ننتقل للتالي بدل الانتظار للأبد
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 15000),
     })
     if (res.ok && (!stream || res.body)) return res
     console.error(`[ai] ${model} failed:`, res.status, (await res.text()).slice(0, 200))
     return null
   } catch (e) {
-    console.error(`[ai] ${model} network error:`, e)
+    console.error(`[ai] ${model} network/timeout error:`, e)
     return null
   }
 }

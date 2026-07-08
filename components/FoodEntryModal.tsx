@@ -139,6 +139,8 @@ export default function FoodEntryModal({
         headers: { 'Content-Type': 'application/json' },
         // بلا وزن صريح — يقدّره الذكاء من النص («ملعقة عسل» = ملعقة، ليس 100جم)
         body: JSON.stringify({ foodName, language: lang }),
+        // مهلة قصوى — لا ننتظر أكثر من ~50 ثانية ثم نعرض خطأ واضح
+        signal: AbortSignal.timeout(50000),
       })
       if (!res.ok) throw new Error('failed')
       const data = await res.json()
@@ -159,8 +161,11 @@ export default function FoodEntryModal({
       if (typeof data.totalGrams === 'number' && data.totalGrams > 0) {
         setQuantity(data.totalGrams)
       }
-    } catch {
-      setAiError(t('تعذّر الحساب — تأكد من الاتصال وحاول مرة أخرى', 'Could not calculate — check your connection and try again'))
+    } catch (e) {
+      const timedOut = e instanceof DOMException && e.name === 'TimeoutError'
+      setAiError(timedOut
+        ? t('الخدمة بطيئة الآن — حاول مرة أخرى', 'The service is slow right now — please try again')
+        : t('تعذّر الحساب — تأكد من الاتصال وحاول مرة أخرى', 'Could not calculate — check your connection and try again'))
     } finally {
       setAiLoading(false)
     }
