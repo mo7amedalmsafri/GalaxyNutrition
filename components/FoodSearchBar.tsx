@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, X, Sparkles, Loader2 } from 'lucide-react'
+import { Search, X, Sparkles, Loader2, Star } from 'lucide-react'
 import { FoodDBItem, searchFoods, getPopularFoods } from '@/lib/foodDatabase'
 import FoodEntryModal from './FoodEntryModal'
 import { FoodItem } from '@/lib/types'
+import { SavedMeal } from '@/lib/savedMeals'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 
 interface FoodSearchBarProps {
   onAddFood?: (item: Omit<FoodItem, 'id' | 'loggedAt'>) => void
+  saved?: SavedMeal[]
+  onRemoveSaved?: (id: string) => void
 }
 
-export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
+export default function FoodSearchBar({ onAddFood, saved = [], onRemoveSaved }: FoodSearchBarProps) {
   const t = useT()
   const [profile] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const L    = (profile.theme    ?? 'dark') === 'light'
@@ -28,6 +31,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFood, setSelectedFood] = useState<FoodDBItem | null>(null)
   const [aiQuantity, setAiQuantity] = useState<number | undefined>(undefined)
+  const [selectedMealType, setSelectedMealType] = useState<FoodItem['mealType'] | undefined>(undefined)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,6 +59,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
       const f = g / 100                       // معامل التحويل إلى القيم الإجمالية
       const r = (v: number) => Math.round((v ?? 0) * f * 10) / 10
       setAiQuantity(Math.round(g))
+      setSelectedMealType(undefined)
       // نمرّر القيم الإجمالية للكمية الموصوفة (لا لكل 100جم)
       setSelectedFood({
         id: 'ai-' + Date.now(),
@@ -81,6 +86,29 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
     } finally {
       setAiLoading(false)
     }
+  }
+
+  // فتح النافذة على وجبة محفوظة (بقيمها الإجمالية ونوعها)
+  const pickSaved = (m: SavedMeal) => {
+    setAiQuantity(m.quantity)
+    setSelectedMealType(m.mealType)
+    setSelectedFood({
+      id: m.id,
+      name: m.name,
+      nameAr: m.name,
+      emoji: '⭐',
+      calories: m.nutrition.calories,
+      protein: m.nutrition.protein,
+      carbs: m.nutrition.carbs,
+      fiber: m.nutrition.fiber ?? 0,
+      sugars: m.nutrition.sugars ?? 0,
+      fat: m.nutrition.fat,
+      saturatedFat: m.nutrition.saturatedFat ?? 0,
+      unsaturatedFat: m.nutrition.unsaturatedFat ?? 0,
+      sodium: m.nutrition.sodium ?? 0,
+      potassium: m.nutrition.potassium ?? 0,
+    } as FoodDBItem)
+    setIsOpen(false)
   }
 
   // Close on outside click
@@ -137,6 +165,42 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
             boxShadow: '0 16px 50px rgba(0,0,0,0.6)',
           }}
         >
+          {/* ── الوجبات المحفوظة (المفضلة) ── */}
+          {!query.trim() && saved.length > 0 && (
+            <div className="p-3 pb-1">
+              <p className="text-xs text-white/45 px-1 mb-2 flex items-center gap-1.5">
+                <Star size={12} color="#f59e0b" fill="#f59e0b" />
+                {t('الوجبات المحفوظة', 'Saved Meals')}
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                {saved.map(m => (
+                  <div
+                    key={m.id}
+                    className="relative flex-shrink-0 rounded-xl px-3 py-2 pr-7 min-w-[7.5rem]"
+                    style={{ background: cardBg, border: `1px solid ${cardBdr}` }}
+                  >
+                    <button onClick={() => pickSaved(m)} className="block text-right w-full active:scale-95 transition-transform">
+                      <span className="block text-xs text-white font-medium truncate max-w-[7rem]">{m.name}</span>
+                      <span className="text-xs font-black" style={{ color: '#f59e0b' }}>
+                        {Math.round(m.nutrition.calories)}
+                      </span>
+                      <span className="text-[10px] text-white/35"> {t('سعرة', 'kcal')} · {m.quantity}{t('جم', 'g')}</span>
+                    </button>
+                    {onRemoveSaved && (
+                      <button
+                        onClick={() => onRemoveSaved(m.id)}
+                        aria-label={t('إزالة', 'Remove')}
+                        className="absolute top-1 left-1 p-0.5 rounded-md active:scale-90"
+                      >
+                        <X size={13} color="rgba(255,255,255,0.4)" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="p-3 pb-1">
             {/* زر الذكاء الاصطناعي — يظهر أول ما تكتب أي أكلة */}
             {query.trim() && (
@@ -171,7 +235,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
             {results.map(food => (
               <button
                 key={food.id}
-                onClick={() => { setAiQuantity(100); setSelectedFood({ ...food, nameAr: lang === 'en' ? food.name : food.nameAr }); setIsOpen(false) }}
+                onClick={() => { setAiQuantity(100); setSelectedMealType(undefined); setSelectedFood({ ...food, nameAr: lang === 'en' ? food.name : food.nameAr }); setIsOpen(false) }}
                 className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl transition-all active:scale-95"
                 style={{
                   background: cardBg,
@@ -197,6 +261,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
         <FoodEntryModal
           initialName={selectedFood.nameAr}
           initialQuantity={aiQuantity}
+          initialMealType={selectedMealType}
           initialNutrition={{
             calories: selectedFood.calories,
             protein: selectedFood.protein,

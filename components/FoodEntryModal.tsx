@@ -14,6 +14,9 @@ interface FoodEntryModalProps {
   /** الوزن الفعلي بالجرام للكمية الموصوفة (يُشتق من الوصف/الباركود) */
   initialQuantity?: number
   initialMealType?: FoodItem['mealType']
+  /** عنوان النافذة وزر الحفظ — يتغيّر في وضع التعديل */
+  title?: string
+  saveLabel?: string
   onSave: (item: Omit<FoodItem, 'id' | 'loggedAt'>) => void
   onClose: () => void
 }
@@ -66,6 +69,8 @@ export default function FoodEntryModal({
   initialNutrition,
   initialQuantity,
   initialMealType,
+  title,
+  saveLabel,
   onSave,
   onClose,
 }: FoodEntryModalProps) {
@@ -298,14 +303,14 @@ export default function FoodEntryModal({
           >
             <X size={20} color={closeBtnCl} />
           </button>
-          <h2 className="text-lg font-bold text-white">{t('إضافة طعام', 'Add Food')}</h2>
+          <h2 className="text-lg font-bold text-white">{title ?? t('إضافة طعام', 'Add Food')}</h2>
           <button
             onClick={handleSave}
             disabled={!name.trim()}
             className="btn-galaxy px-4 py-2 text-sm"
             style={{ opacity: name.trim() ? 1 : 0.5 }}
           >
-            {t('حفظ', 'Save')}
+            {saveLabel ?? t('حفظ', 'Save')}
           </button>
         </div>
 

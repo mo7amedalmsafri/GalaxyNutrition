@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Pencil } from 'lucide-react'
+import { Plus, Trash2, Pencil, Star } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import FoodEntryModal from '@/components/FoodEntryModal'
 import { FoodItem } from '@/lib/types'
 import { getTodayDate } from '@/lib/utils'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog } from '@/lib/db'
+import { useSavedMeals } from '@/lib/savedMeals'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 
 const MEAL_ORDER: FoodItem['mealType'][] = ['breakfast', 'lunch', 'dinner', 'snack']
@@ -33,6 +34,7 @@ export default function LogPage() {
   const [loading,   setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editItem,  setEditItem]  = useState<FoodItem | null>(null)  // الوجبة المراد تعديلها
+  const savedMeals = useSavedMeals()
 
   useEffect(() => {
     getFoodLogs(today).then(data => { setFoods(data); setLoading(false) })
@@ -156,6 +158,16 @@ export default function LogPage() {
                       </p>
                     </div>
 
+                    {/* زر المفضلة */}
+                    <button
+                      onClick={() => savedMeals.toggle(food)}
+                      aria-label={t('حفظ في المفضلة', 'Save to favorites')}
+                      className="p-2 rounded-xl transition-colors flex-shrink-0"
+                      style={{ background: savedMeals.isSaved(food) ? 'rgba(245,158,11,0.16)' : 'rgba(255,255,255,0.05)' }}>
+                      <Star size={14} color={savedMeals.isSaved(food) ? '#f59e0b' : 'rgba(255,255,255,0.4)'}
+                            fill={savedMeals.isSaved(food) ? '#f59e0b' : 'none'} />
+                    </button>
+
                     {/* زر تعديل */}
                     <button
                       onClick={() => setEditItem(food)}
@@ -202,6 +214,8 @@ export default function LogPage() {
       {/* Modal تعديل */}
       {editItem && (
         <FoodEntryModal
+          title={t('تعديل الوجبة', 'Edit Meal')}
+          saveLabel={t('تحديث', 'Update')}
           initialName={editItem.name}
           initialNutrition={editItem.nutrition}
           initialQuantity={editItem.quantity}

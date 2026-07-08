@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star } from 'lucide-react'
+import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import BMICircle from '@/components/BMICircle'
 import CalorieRing from '@/components/CalorieRing'
@@ -14,7 +14,8 @@ import FoodSearchBar from '@/components/FoodSearchBar'
 import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp } from '@/lib/store'
-import { getFoodLogs, addFoodLog, deleteFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
+import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
+import { useSavedMeals } from '@/lib/savedMeals'
 import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
 
@@ -71,6 +72,8 @@ export default function Dashboard() {
   const [checkingRemoteProfile, setCheckingRemoteProfile] = useState(false)
   const [levelUpInfo, setLevelUpInfo] = useState<LevelInfo | null>(null)
   const [todayFoods, setTodayFoods] = useState<FoodItem[]>([])
+  const [editingFood, setEditingFood] = useState<FoodItem | null>(null)
+  const savedMeals = useSavedMeals()
   const [waterMl, setWaterMlState] = useState(0)
   const [weightHistory, setWeightHistory] = useState(WEIGHT_HISTORY_FALLBACK)
   const [showFoodModal, setShowFoodModal] = useState(false)
@@ -196,6 +199,16 @@ export default function Dashboard() {
     setTodayFoods(prev => prev.filter(f => f.id !== id))
     await deleteFoodLog(id)
     loseXp(XP_REWARDS.LOG_FOOD)   // خصم XP — فقط من نقاط اليوم
+  }
+
+  // تعديل وجبة مضافة — يحدّث القيم بعد إعادة الحساب (بلا XP جديد)
+  const handleEditFood = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
+    const id = editingFood?.id
+    if (!id) return
+    setTodayFoods(prev => prev.map(f => f.id === id ? { ...f, ...item } : f))
+    setEditingFood(null)
+    const updated = await updateFoodLog(id, item)
+    if (updated) setTodayFoods(prev => prev.map(f => f.id === id ? updated : f))
   }
 
   const addWater = (ml: number) => {
@@ -329,7 +342,7 @@ export default function Dashboard() {
 
       {/* Food Search Bar */}
       <div className="animate-slide-up">
-        <FoodSearchBar onAddFood={handleAddFood} />
+        <FoodSearchBar onAddFood={handleAddFood} saved={savedMeals.saved} onRemoveSaved={savedMeals.remove} />
       </div>
 
       {/* ── Calorie Summary ── */}
@@ -582,7 +595,23 @@ export default function Dashboard() {
                   {Math.round(food.nutrition.calories)} <span className="text-xs font-normal text-white/30">{t('سعرة', 'kcal')}</span>
                 </p>
                 <button
+                  onClick={() => savedMeals.toggle(food)}
+                  aria-label={t('حفظ في المفضلة', 'Save to favorites')}
+                  className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
+                  style={{ background: savedMeals.isSaved(food) ? 'rgba(245,158,11,0.16)' : 'rgba(255,255,255,0.05)' }}>
+                  <Star size={14} color={savedMeals.isSaved(food) ? '#f59e0b' : 'rgba(255,255,255,0.4)'}
+                        fill={savedMeals.isSaved(food) ? '#f59e0b' : 'none'} />
+                </button>
+                <button
+                  onClick={() => setEditingFood(food)}
+                  aria-label={t('تعديل', 'Edit')}
+                  className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
+                  style={{ background: 'rgba(0,212,255,0.08)' }}>
+                  <Pencil size={14} color="rgba(0,212,255,0.6)" />
+                </button>
+                <button
                   onClick={() => handleDeleteFood(food.id)}
+                  aria-label={t('حذف', 'Delete')}
                   className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
                   style={{ background: 'rgba(239,68,68,0.08)' }}>
                   <Trash2 size={14} color="rgba(239,68,68,0.55)" />
@@ -604,6 +633,20 @@ export default function Dashboard() {
 
       {showFoodModal && (
         <FoodEntryModal onSave={handleAddFood} onClose={() => setShowFoodModal(false)} />
+      )}
+
+      {/* ── Edit an already-added meal ── */}
+      {editingFood && (
+        <FoodEntryModal
+          title={t('تعديل الوجبة', 'Edit Meal')}
+          saveLabel={t('تحديث', 'Update')}
+          initialName={editingFood.name}
+          initialQuantity={editingFood.quantity}
+          initialMealType={editingFood.mealType}
+          initialNutrition={editingFood.nutrition}
+          onSave={handleEditFood}
+          onClose={() => setEditingFood(null)}
+        />
       )}
 
       {/* ── Level-Up Toast ── */}
