@@ -48,48 +48,54 @@ export default function ScanPage() {
   const cameraRef = useRef<HTMLInputElement>(null)
 
   const processImage = useCallback(async (file: File) => {
-    // صور كاميرا الآيفون تكون HEIC وضخمة (12MP) — نضغطها ونحوّلها JPEG
-    // عبر canvas حتى يقبلها الذكاء الاصطناعي (يعالج الصيغة والحجم معاً).
-    const compressToJpeg = (f: File) =>
-      new Promise<{ dataUrl: string; base64: string }>((resolve, reject) => {
-        const objUrl = URL.createObjectURL(f)
-        const img = new Image()
-        img.onload = () => {
-          URL.revokeObjectURL(objUrl)
-          const maxSize = 1280
-          const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
-          const canvas = document.createElement('canvas')
-          canvas.width = Math.round(img.width * scale)
-          canvas.height = Math.round(img.height * scale)
-          const ctx = canvas.getContext('2d')
-          if (!ctx) { reject(new Error('no canvas')); return }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-          resolve({ dataUrl, base64: dataUrl.split(',')[1] })
-        }
-        img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('bad image')) }
-        img.src = objUrl
+    // صور كاميرا الآيفون تكون HEIC وضخمة (12MP). نحوّلها إلى JPEG صغير
+    // عبر createImageBitmap (يفكّ HEIC على iOS ويتجنّب هشاشة <img>).
+    try {
+      const bitmap = await createImageBitmap(file)
+      const maxSize = 1280
+      const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(bitmap.width * scale)
+      canvas.height = Math.round(bitmap.height * scale)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('no canvas')
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      bitmap.close?.()
+
+      // toBlob أكثر موثوقية من toDataURL على iOS للصور الكبيرة
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('no blob'))), 'image/jpeg', 0.85)
+      )
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(r.result as string)
+        r.onerror = () => reject(new Error('read fail'))
+        r.readAsDataURL(blob)
       })
 
-    try {
-      const { dataUrl, base64 } = await compressToJpeg(file)
       setImageUrl(dataUrl)
       setImageMime('image/jpeg')
-      setImageBase64(base64)
+      setImageBase64(dataUrl.split(',')[1])
       setState('preview')
     } catch {
-      // تعذّر الضغط (صيغة غير مدعومة) — نرسل الصورة كما هي كحل احتياطي
-      const url = URL.createObjectURL(file)
-      setImageUrl(url)
-      setImageMime(file.type || 'image/jpeg')
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setImageBase64((e.target?.result as string).split(',')[1])
+      // احتياطي: نقرأ الملف كما هو (نادراً ما نصل هنا)
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader()
+          r.onload = () => resolve(r.result as string)
+          r.onerror = () => reject(new Error('read fail'))
+          r.readAsDataURL(file)
+        })
+        setImageUrl(dataUrl)
+        setImageMime(file.type || 'image/jpeg')
+        setImageBase64(dataUrl.split(',')[1])
         setState('preview')
+      } catch {
+        setErrorMsg(t('تعذّر قراءة الصورة — جرّب صورة أخرى', 'Could not read the image — try another one'))
+        setState('error')
       }
-      reader.readAsDataURL(file)
     }
-  }, [])
+  }, [t])
 
   // تعديل قيمة غذائية يدوياً
   const updateFoodNutrition = (index: number, field: 'calories' | 'protein' | 'carbs' | 'fat', value: number) => {
