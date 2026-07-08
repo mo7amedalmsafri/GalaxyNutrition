@@ -57,11 +57,12 @@ workflows:
 
       - name: Build IPA
         script: |
-          # -allowProvisioningUpdates lets Xcode auto-create the profile
+          # -allowProvisioningUpdates lets Xcode auto-create the profile.
+          # Use = so the leading dash isn't parsed as a separate option.
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags "-allowProvisioningUpdates"
+            --archive-flags="-allowProvisioningUpdates"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
