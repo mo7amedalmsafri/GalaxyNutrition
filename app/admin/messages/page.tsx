@@ -25,6 +25,7 @@ export default function AdminMessagesPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
@@ -34,8 +35,11 @@ export default function AdminMessagesPage() {
       setAllowed(true)
       try {
         const res = await fetch('/api/admin/messages')
-        const d = await res.json()
+        const d = await res.json().catch(() => ({}))
         if (res.ok) setMessages(d.messages ?? [])
+        else setFetchError(d.error || `خطأ ${res.status}`)
+      } catch {
+        setFetchError('تعذّر الاتصال بالخادم')
       } finally {
         setLoading(false)
       }
@@ -94,7 +98,14 @@ export default function AdminMessagesPage() {
           <div className="flex justify-center py-20"><Loader2 size={28} className="animate-spin" color="#97E325" /></div>
         )}
 
-        {allowed && !loading && messages.length === 0 && (
+        {allowed && !loading && fetchError && (
+          <div className="rounded-2xl p-4 text-center text-sm mb-3"
+            style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+            {fetchError}
+          </div>
+        )}
+
+        {allowed && !loading && !fetchError && messages.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-20 text-white/40">
             <Inbox size={48} /><p>{t('لا توجد رسائل بعد', 'No messages yet')}</p>
           </div>
