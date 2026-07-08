@@ -105,6 +105,44 @@ export default function WorkoutPlanGenerator() {
     }
   }
 
+  // يعرض الخطة سطراً سطراً، ويضيف زر فيديو YouTube جنب كل سطر تمرين
+  const renderPlan = (plan: string) => {
+    const lines = plan.split('\n')
+    // أسطر التمارين تبدأ بنقطة/شرطة. نتوقّف عن إضافة الفيديو بعد قسم النصائح
+    const tipsIdx = lines.findIndex(l => /💡|نصائح|tips/i.test(l))
+    const isBullet = (s: string) => /^[•\-–▪●*]\s+/.test(s.trim())
+
+    return lines.map((line, i) => {
+      const trimmed = line.trim()
+      const exercise = isBullet(trimmed) && (tipsIdx === -1 || i < tipsIdx)
+      if (!exercise) {
+        return (
+          <div key={i} className="text-[13px] text-white/80 leading-relaxed whitespace-pre-wrap break-words">
+            {line || ' '}
+          </div>
+        )
+      }
+      // اسم التمرين = النص قبل الشرطة/القوس (نحذف المجموعات×التكرارات)
+      const name = trimmed.replace(/^[•\-–▪●*]\s+/, '').split(/\s[—–-]\s|\(|:|\d/)[0].trim()
+      const q = encodeURIComponent(`${name} ${lang === 'en' ? 'exercise proper form' : 'تمرين طريقة الأداء'}`)
+      return (
+        <div key={i} className="flex items-start gap-2 py-0.5">
+          <span className="flex-1 text-[13px] text-white/80 leading-relaxed whitespace-pre-wrap break-words">{line}</span>
+          <a
+            href={`https://www.youtube.com/results?search_query=${q}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('فيديو التمرين', 'Exercise video')}
+            className="flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded-md active:scale-90 transition-transform"
+            style={{ background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.25)' }}
+          >
+            <span className="text-xs">🎥</span>
+          </a>
+        </div>
+      )
+    })
+  }
+
   const chip = (active: boolean) => ({
     background: active ? 'rgba(151,227,37,0.16)' : 'rgba(255,255,255,0.05)',
     border: `1px solid ${active ? 'rgba(151,227,37,0.5)' : 'rgba(255,255,255,0.08)'}`,
@@ -125,12 +163,12 @@ export default function WorkoutPlanGenerator() {
       {/* ── Saved plan preview ── */}
       {saved && !showForm && (
         <>
+          <p className="text-[11px] text-white/40 mb-2 flex items-center gap-1">
+            🎥 {t('اضغط الفيديو جنب أي تمرين لمشاهدة طريقة أدائه', 'Tap the video icon next to any exercise to see how it\'s performed')}
+          </p>
           <div className="rounded-xl p-4 mb-3"
-            style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(151,227,37,0.15)' }}>
-            <pre className="text-[13px] text-white/80 leading-relaxed whitespace-pre-wrap font-sans"
-              style={{ fontFamily: 'inherit', direction: lang === 'en' ? 'ltr' : 'rtl' }}>
-              {saved.plan}
-            </pre>
+            style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(151,227,37,0.15)', direction: lang === 'en' ? 'ltr' : 'rtl' }}>
+            {renderPlan(saved.plan)}
           </div>
           <div className="flex gap-2">
             <button onClick={() => setShowForm(true)}
