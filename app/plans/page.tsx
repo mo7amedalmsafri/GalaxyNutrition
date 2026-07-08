@@ -105,17 +105,18 @@ export default function PlansPage() {
           targets,
         }),
       })
-      if (!res.ok || !res.body) {
-        let detail = t('فشل الاتصال بالخادم', 'Server connection failed')
-        try { const j = await res.json(); if (j?.error) detail = j.error } catch { /* */ }
-        throw new Error(detail)
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.plan) {
+        throw new Error(data?.error || t('فشل الاتصال بالخادم', 'Server connection failed'))
       }
-      const reader = res.body.getReader(); const decoder = new TextDecoder(); let full = ''
-      while (true) {
-        const { done, value } = await reader.read(); if (done) break
-        full += decoder.decode(value, { stream: true }); setPlanText(full)
+      const full: string = data.plan
+      // كشف تدريجي محلي (يعطي إحساس البث دون مشاكل البث في iOS)
+      const step = Math.max(3, Math.round(full.length / 240))
+      for (let i = 0; i <= full.length; i += step) {
+        setPlanText(full.slice(0, i))
+        await new Promise(r => setTimeout(r, 12))
       }
-      if (!full.trim()) throw new Error(t('لم يتم استلام رد', 'No response from server'))
+      setPlanText(full)
       const saved = await savePlan({
         goal:         profile.goal,
         equipment:    [profile.gender, profile.activityLevel, dietKey],

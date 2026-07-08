@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { aiChatStream } from '@/lib/ai'
+import { aiChat } from '@/lib/ai'
 
 export const maxDuration = 60
 
@@ -169,8 +169,9 @@ Strict rules:
       ? `الجنس: ${genderLabel}\nالعمر: ${age} سنة\nالوزن: ${weight} كجم\nالطول: ${height} سم\nمستوى النشاط: ${activityLabel}\nالهدف: ${goalLabel}\nنوع النظام الغذائي: ${dietLabel}${targetsBlockAr}\n\nاكتب خطة تغذية يومية شاملة ومفصلة لهذا الشخص باللغة العربية، مع شرح مبادئ النظام الغذائي المختار.`
       : `Gender: ${genderLabel}\nAge: ${age} years\nWeight: ${weight} kg\nHeight: ${height} cm\nActivity Level: ${activityLabel}\nGoal: ${goalLabel}\nDiet Type: ${dietLabel}${targetsBlockEn}\n\nWrite a comprehensive detailed daily nutrition plan for this person, explaining the chosen diet type principles.`
 
-    // ── Call AI (free-first chain, streaming) ─────────────────────────────────
-    const upstream = await aiChatStream(
+    // ── Call AI (non-streaming: streaming is unreliable inside the iOS
+    //    WKWebView, so we return the full plan in one JSON response) ───────────
+    const plan = await aiChat(
       [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt   },
@@ -178,7 +179,7 @@ Strict rules:
       { maxTokens: 2000 }
     )
 
-    if (!upstream || !upstream.body) {
+    if (!plan || !plan.trim()) {
       console.error('[generate-plan] all AI providers failed')
       return new Response(
         JSON.stringify({ error: lang === 'ar' ? 'الذكاء الاصطناعي غير متاح حالياً، حاول بعد قليل' : 'AI temporarily unavailable, try again shortly' }),
@@ -186,48 +187,10 @@ Strict rules:
       )
     }
 
-    // ── Stream SSE → plain text ───────────────────────────────────────────────
-    const encoder = new TextEncoder()
-    const readable = new ReadableStream({
-      async start(controller) {
-        const reader  = upstream.body!.getReader()
-        const decoder = new TextDecoder()
-        let buf = ''
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            buf += decoder.decode(value, { stream: true })
-            const lines = buf.split('\n')
-            buf = lines.pop() ?? ''
-            for (const line of lines) {
-              const trimmed = line.trim()
-              if (!trimmed.startsWith('data:')) continue
-              const data = trimmed.slice(5).trim()
-              if (data === '[DONE]') { controller.close(); return }
-              try {
-                const parsed = JSON.parse(data)
-                if (parsed.error) {
-                  controller.error(new Error(parsed.error?.message ?? 'OpenRouter error'))
-                  return
-                }
-                const text = parsed.choices?.[0]?.delta?.content
-                if (text) controller.enqueue(encoder.encode(text))
-              } catch { /* skip malformed lines */ }
-            }
-          }
-        } catch (e) { controller.error(e); return }
-        controller.close()
-      },
-    })
-
-    return new Response(readable, {
-      headers: {
-        'Content-Type':      'text/plain; charset=utf-8',
-        'Cache-Control':     'no-cache',
-        'X-Accel-Buffering': 'no',
-      },
-    })
+    return new Response(
+      JSON.stringify({ plan }),
+      { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' } }
+    )
   } catch (err) {
     console.error('[generate-plan] Unexpected error:', err)
     return new Response(
