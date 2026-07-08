@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dumbbell, Plus, Trash2, Zap, Search, X } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
+import WorkoutPlanGenerator from '@/components/WorkoutPlanGenerator'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { getFoodLogs } from '@/lib/db'
 import { getTodayDate } from '@/lib/utils'
@@ -497,6 +498,9 @@ export default function WorkoutPage() {
           </p>
         </div>
       )}
+
+      {/* ── AI Training Plan ─────────────────────────────────────────────── */}
+      <WorkoutPlanGenerator />
     </div>
   )
 }
