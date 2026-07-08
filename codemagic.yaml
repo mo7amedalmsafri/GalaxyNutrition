@@ -35,18 +35,17 @@ workflows:
       - name: Sync Capacitor iOS project
         script: npx cap sync ios
 
-      - name: Set up automatic code signing
+      - name: Set up code signing certificate
         script: |
-          # Automatic signing: init keychain, then create+download the
-          # distribution certificate and App Store profile, then apply.
-          # Requires the App Store Connect API key to have the Admin role
-          # (App Manager cannot create signing certificates).
+          # Bring the distribution certificate into the keychain. Xcode
+          # itself will create/download the provisioning profile during the
+          # archive step below (-allowProvisioningUpdates), using the
+          # App Store Connect API key from the integration + DEVELOPMENT_TEAM.
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles
 
       - name: Increment build number
         script: |
@@ -55,9 +54,11 @@ workflows:
 
       - name: Build IPA
         script: |
+          # -allowProvisioningUpdates lets Xcode auto-create the profile
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "-allowProvisioningUpdates"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
