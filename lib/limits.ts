@@ -13,8 +13,23 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean)
 
-export const FREE_DAILY_SCANS  = 2
-export const FREE_WEEKLY_PLANS = 1
+// ══════════════════════════════════════════════════════════════════
+//  🎛️ المكان المركزي للتحكم بالاشتراك — عدّل الأرقام هنا فقط
+//  limit = عدد المرات المجانية | period = 'day' يومي أو 'week' أسبوعي
+//  اجعل limit = 0 لجعل الميزة Pro فقط من البداية (بلا مجاني)
+//  اجعل limit = رقم كبير جداً (مثل 9999) لجعلها مجانية عملياً
+// ══════════════════════════════════════════════════════════════════
+export type Feature = 'scan' | 'mealPlan' | 'aiCalc' | 'workoutPlan'
+
+export const FREE_LIMITS: Record<Feature, { period: 'day' | 'week'; limit: number }> = {
+  scan:        { period: 'day',  limit: 2 },  // 📷 تحليل صورة الطعام
+  mealPlan:    { period: 'week', limit: 1 },  // 📋 توليد خطة غذائية
+  aiCalc:      { period: 'day',  limit: 3 },  // ✨ حساب السعرات بالذكاء
+  workoutPlan: { period: 'week', limit: 1 },  // 🏋️ خطة التمارين بالذكاء
+}
+
+export const FREE_DAILY_SCANS  = FREE_LIMITS.scan.limit
+export const FREE_WEEKLY_PLANS = FREE_LIMITS.mealPlan.limit
 const PRO_KEY = 'galaxy-pro-active'
 
 // ── Admin bypass ─────────────────────────────────────────────────────
@@ -47,6 +62,49 @@ export function activatePro(code: string): boolean {
 /** Removes the local Pro activation (admin bypass is not affected). */
 export function deactivatePro(): void {
   if (typeof window !== 'undefined') localStorage.removeItem(PRO_KEY)
+}
+
+// ── نظام الحصص المجانية العام (لكل ميزة) ─────────────────────────────
+// مفتاح الفترة الحالية: تاريخ اليوم للحد اليومي، أو دلو ٧ أيام للحد الأسبوعي
+function periodKey(period: 'day' | 'week'): string {
+  const now = new Date().toISOString().split('T')[0]
+  if (period === 'day') return now
+  // دلو أسبوعي ثابت (٧ أيام) اعتماداً على عدد الأيام منذ حقبة يونكس
+  const epochDay = Math.floor(new Date(now).getTime() / 86_400_000)
+  return 'W' + Math.floor(epochDay / 7)
+}
+
+function usageKey(f: Feature) { return `dietak-use-${f}` }
+
+/** كم مرة استُخدمت الميزة في الفترة الحالية */
+export function getFeatureUsage(f: Feature): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const raw = localStorage.getItem(usageKey(f))
+    if (!raw) return 0
+    const s = JSON.parse(raw)
+    return s.key === periodKey(FREE_LIMITS[f].period) ? (s.count || 0) : 0
+  } catch { return 0 }
+}
+
+/** سجّل استخداماً واحداً بعد نجاح العملية */
+export function recordFeatureUse(f: Feature): void {
+  if (typeof window === 'undefined') return
+  const key = periodKey(FREE_LIMITS[f].period)
+  const count = getFeatureUsage(f) + 1
+  localStorage.setItem(usageKey(f), JSON.stringify({ key, count }))
+}
+
+/** هل يُسمح باستخدام الميزة الآن؟ (Pro/مشرف = دائماً، وإلا ضمن الحد) */
+export function canUseFeature(f: Feature, email?: string | null): boolean {
+  if (isProUser(email)) return true
+  return getFeatureUsage(f) < FREE_LIMITS[f].limit
+}
+
+/** المتبقّي من الحصة المجانية ('∞' لـ Pro) */
+export function remainingFeature(f: Feature, email?: string | null): number | '∞' {
+  if (isProUser(email)) return '∞'
+  return Math.max(0, FREE_LIMITS[f].limit - getFeatureUsage(f))
 }
 
 // ── Scan limits ───────────────────────────────────────────────────────

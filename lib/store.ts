@@ -1,5 +1,15 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+/** بريد المستخدم الحالي (لفحص حالة الاشتراك/المشرف) — null قبل التحميل أو بلا جلسة */
+export function useUserEmail(): string | null {
+  const [email, setEmail] = useState<string | null>(null)
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null)).catch(() => {})
+  }, [])
+  return email
+}
 
 export function useLocalStorage<T>(
   key: string,
