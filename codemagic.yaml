@@ -40,12 +40,13 @@ workflows:
 
       - name: Set up automatic code signing
         script: |
-          # Codemagic creates the distribution certificate + provisioning
-          # profile automatically using the App Store Connect API key.
+          # Order matters: init keychain FIRST, then fetch (and create if
+          # missing) the distribution certificate + provisioning profile,
+          # then load them into the keychain.
+          keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
-          keychain initialize
           keychain add-certificates
           xcode-project use-profiles
 
