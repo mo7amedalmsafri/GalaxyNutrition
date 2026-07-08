@@ -39,16 +39,17 @@ workflows:
 
       - name: Set up code signing certificate
         script: |
-          # Use a persistent private key (stored as the CERTIFICATE_PRIVATE_KEY
-          # env var in Codemagic) so the distribution certificate + its private
-          # key survive across builds. Xcode auto-creates the provisioning
-          # profile during archive (-allowProvisioningUpdates).
+          # Persistent private key (CERTIFICATE_PRIVATE_KEY env var) keeps the
+          # distribution certificate + its private key valid across builds.
+          # use-profiles then configures the Xcode project AND writes the
+          # export options plist that the Build IPA step needs.
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --certificate-key "@env:CERTIFICATE_PRIVATE_KEY" \
             --create
           keychain add-certificates
+          xcode-project use-profiles
 
       - name: Increment build number
         script: |
@@ -57,12 +58,9 @@ workflows:
 
       - name: Build IPA
         script: |
-          # -allowProvisioningUpdates lets Xcode auto-create the profile.
-          # Use = so the leading dash isn't parsed as a separate option.
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME" \
-            --archive-flags="-allowProvisioningUpdates"
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
