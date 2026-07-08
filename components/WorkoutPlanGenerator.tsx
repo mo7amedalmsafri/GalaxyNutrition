@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Loader2, Dumbbell, Trash2, RefreshCw } from 'lucide-react'
+import { Sparkles, Loader2, Dumbbell, Trash2, RefreshCw, X } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 
@@ -47,6 +47,7 @@ export default function WorkoutPlanGenerator() {
   const lang = profile.language ?? 'ar'
 
   const [sports, setSports] = useState<string[]>(['weights'])
+  const [customSport, setCustomSport] = useState('')
   const [days, setDays] = useState(3)
   const [minutes, setMinutes] = useState(45)
   const [goal, setGoal] = useState(defaultGoal(profile.goal))
@@ -62,8 +63,18 @@ export default function WorkoutPlanGenerator() {
   const toggleSport = (id: string) =>
     setSports(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
 
+  const PRESET_IDS = new Set(SPORTS.map(s => s.id))
+  const customSports = sports.filter(s => !PRESET_IDS.has(s))
+
+  const addCustomSport = () => {
+    const v = customSport.trim()
+    if (!v) return
+    if (!sports.some(s => s.toLowerCase() === v.toLowerCase())) setSports(prev => [...prev, v])
+    setCustomSport('')
+  }
+
   const generate = async () => {
-    if (sports.length === 0 || loading) return
+    if (loading) return
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/generate-workout', {
@@ -141,7 +152,9 @@ export default function WorkoutPlanGenerator() {
         <div className="flex flex-col gap-4">
           {/* Sports */}
           <div>
-            <label className="text-xs text-white/50 mb-2 block">{t('الرياضات (اختر واحدة أو أكثر)', 'Sports (pick one or more)')}</label>
+            <label className="text-xs text-white/50 mb-2 block">
+              {t('الرياضات (اختر، أو اكتب رياضتك، أو اتركها للذكاء)', 'Sports (pick, type your own, or leave to AI)')}
+            </label>
             <div className="flex flex-wrap gap-2">
               {SPORTS.map(s => (
                 <button key={s.id} onClick={() => toggleSport(s.id)}
@@ -150,30 +163,62 @@ export default function WorkoutPlanGenerator() {
                   <span>{s.icon}</span> {t(s.ar, s.en)}
                 </button>
               ))}
+              {/* الرياضات المكتوبة يدوياً */}
+              {customSports.map(s => (
+                <button key={s} onClick={() => toggleSport(s)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
+                  style={chip(true)}>
+                  ✨ {s} <X size={12} />
+                </button>
+              ))}
+            </div>
+            {/* إضافة رياضة حرة */}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={customSport}
+                onChange={e => setCustomSport(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSport() } }}
+                placeholder={t('أضف رياضة أخرى (مثال: تنس، كروسفت، جوجيتسو)', 'Add another sport (e.g. tennis, crossfit)')}
+                className="galaxy-input flex-1 px-3 py-2 text-xs" />
+              <button onClick={addCustomSport} disabled={!customSport.trim()}
+                className="px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 disabled:opacity-40"
+                style={{ background: 'rgba(0,212,255,0.14)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}>
+                {t('إضافة', 'Add')}
+              </button>
             </div>
           </div>
 
-          {/* Days + Minutes */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-white/50 mb-2 block">{t('أيام/أسبوع', 'Days/week')}</label>
-              <div className="flex flex-wrap gap-1.5">
-                {[2, 3, 4, 5, 6].map(d => (
-                  <button key={d} onClick={() => setDays(d)}
-                    className="w-9 h-9 rounded-lg text-sm font-bold transition-all"
-                    style={chip(days === d)}>{d}</button>
-                ))}
-              </div>
+          {/* Days */}
+          <div>
+            <label className="text-xs text-white/50 mb-2 block">{t('كم مرة تتمرّن في الأسبوع؟', 'How many times per week?')}</label>
+            <div className="flex flex-wrap gap-1.5">
+              {[1, 2, 3, 4, 5, 6, 7].map(d => (
+                <button key={d} onClick={() => setDays(d)}
+                  className="w-9 h-9 rounded-lg text-sm font-bold transition-all"
+                  style={chip(days === d)}>{d}</button>
+              ))}
             </div>
-            <div>
-              <label className="text-xs text-white/50 mb-2 block">{t('مدة الحصة', 'Session')}</label>
-              <div className="flex flex-wrap gap-1.5">
-                {[30, 45, 60, 90].map(m => (
-                  <button key={m} onClick={() => setMinutes(m)}
-                    className="px-2.5 h-9 rounded-lg text-xs font-bold transition-all"
-                    style={chip(minutes === m)}>{m}{t('د', 'm')}</button>
-                ))}
-              </div>
+          </div>
+
+          {/* Minutes — open value */}
+          <div>
+            <label className="text-xs text-white/50 mb-2 block">{t('مدة الحصة (دقيقة)', 'Session length (min)')}</label>
+            <div className="flex items-center gap-2">
+              <input type="number" inputMode="numeric" min={10} max={480} value={minutes || ''}
+                onChange={e => setMinutes(Math.min(480, Math.max(0, parseInt(e.target.value) || 0)))}
+                className="galaxy-input px-3 py-2 text-sm w-24 text-center font-bold" dir="ltr" />
+              <span className="text-xs text-white/40">
+                {minutes >= 60 ? t(`≈ ${Math.floor(minutes / 60)} س ${minutes % 60 ? (minutes % 60) + ' د' : ''}`, `≈ ${Math.floor(minutes / 60)}h ${minutes % 60 ? (minutes % 60) + 'm' : ''}`) : t('دقيقة', 'minutes')}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {[30, 45, 60, 90, 120, 180, 240].map(m => (
+                <button key={m} onClick={() => setMinutes(m)}
+                  className="px-2.5 h-8 rounded-lg text-xs font-bold transition-all"
+                  style={chip(minutes === m)}>
+                  {m < 60 ? `${m}${t('د', 'm')}` : t(`${m / 60}س`, `${m / 60}h`)}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -224,11 +269,17 @@ export default function WorkoutPlanGenerator() {
 
           {error && <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>}
 
-          <button onClick={generate} disabled={loading || sports.length === 0}
+          <button onClick={generate} disabled={loading}
             className="btn-galaxy w-full py-3.5 flex items-center justify-center gap-2 disabled:opacity-50">
             {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
             {loading ? t('يبني برنامجك...', 'Building your program...') : t('ولّد البرنامج', 'Generate Program')}
           </button>
+          {sports.length === 0 && (
+            <p className="text-[11px] text-white/35 text-center -mt-1">
+              {t('ما اخترت رياضة — الذكاء الاصطناعي بيختار الأنسب لهدفك',
+                 'No sport selected — AI will choose what fits your goal')}
+            </p>
+          )}
 
           {saved && showForm && (
             <button onClick={() => setShowForm(false)} className="text-xs text-white/40 py-1">
