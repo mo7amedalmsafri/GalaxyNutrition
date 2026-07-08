@@ -25,7 +25,7 @@ workflows:
         BUNDLE_ID: com.dietak.app
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
-      node: 20
+      node: 22
       xcode: latest
       cocoapods: default
     scripts:
