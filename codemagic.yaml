@@ -21,6 +21,8 @@ workflows:
     integrations:
       app_store_connect: dietak-asc-key   # name your API key this in Codemagic
     environment:
+      groups:
+        - appstore   # holds CERTIFICATE_PRIVATE_KEY (added in Codemagic UI)
       vars:
         BUNDLE_ID: com.dietak.app
         XCODE_PROJECT: ios/App/App.xcodeproj
