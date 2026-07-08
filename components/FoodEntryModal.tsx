@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react'
 import { NutritionData, FoodItem } from '@/lib/types'
 import { searchFoods, FoodDBItem } from '@/lib/foodDatabase'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
@@ -120,7 +120,46 @@ export default function FoodEntryModal({
   const [suggestions, setSuggestions] = useState<FoodDBItem[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
 
+  // AI nutrition lookup
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // يحسب القيم الغذائية للاسم المكتوب بالذكاء الاصطناعي (لكل 100 جرام) ويملأ الحقول
+  const calcWithAI = async () => {
+    const foodName = name.trim()
+    if (!foodName || aiLoading) return
+    setAiLoading(true)
+    setAiError('')
+    setShowSuggestions(false)
+    try {
+      const res = await fetch('/api/recalculate-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foodName, estimatedWeight: 100, language: lang }),
+      })
+      if (!res.ok) throw new Error('failed')
+      const data = await res.json()
+      const n = data.nutrition ?? {}
+      setNutrition({
+        calories: n.calories ?? 0,
+        protein: n.protein ?? 0,
+        carbs: n.carbs ?? 0,
+        fiber: n.fiber ?? 0,
+        sugars: n.sugars ?? 0,
+        fat: n.fat ?? 0,
+        saturatedFat: n.saturatedFat ?? 0,
+        unsaturatedFat: n.unsaturatedFat ?? 0,
+        sodium: n.sodium ?? 0,
+        potassium: n.potassium ?? 0,
+      })
+    } catch {
+      setAiError(t('تعذّر الحساب — تأكد من الاتصال وحاول مرة أخرى', 'Could not calculate — check your connection and try again'))
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   // Scroll to top on open
   useEffect(() => {
@@ -275,6 +314,31 @@ export default function FoodEntryModal({
                 ))}
               </div>
             )}
+
+            {/* AI calculate button — fills nutrition for any typed food */}
+            {name.trim() && !showSuggestions && (
+              <button
+                onClick={calcWithAI}
+                disabled={aiLoading}
+                className="mt-2 w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-60"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(151,227,37,0.16), rgba(0,212,255,0.10))',
+                  border: '1px solid rgba(151,227,37,0.35)',
+                }}
+              >
+                {aiLoading
+                  ? <Loader2 size={16} color="#97E325" className="animate-spin flex-shrink-0" />
+                  : <Sparkles size={16} color="#97E325" className="flex-shrink-0" />}
+                <span className="text-sm font-semibold text-start flex-1" style={{ color: '#97E325' }}>
+                  {aiLoading
+                    ? t('يحسب السعرات...', 'Calculating...')
+                    : nutrition.calories > 0
+                      ? t('أعد الحساب بالذكاء الاصطناعي', 'Recalculate with AI')
+                      : t('احسب السعرات بالذكاء الاصطناعي', 'Calculate calories with AI')}
+                </span>
+              </button>
+            )}
+            {aiError && <p className="text-xs mt-1.5 px-1" style={{ color: '#ef4444' }}>{aiError}</p>}
 
             {/* Auto-filled badge */}
             {nutrition.calories > 0 && name.trim() && (
