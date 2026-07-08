@@ -64,6 +64,13 @@ export function deactivatePro(): void {
   if (typeof window !== 'undefined') localStorage.removeItem(PRO_KEY)
 }
 
+/** يضبط علامة Pro المحلية مباشرة (تُستخدم لمزامنة اشتراك Apple/RevenueCat) */
+export function setProLocal(active: boolean): void {
+  if (typeof window === 'undefined') return
+  if (active) localStorage.setItem(PRO_KEY, 'true')
+  else localStorage.removeItem(PRO_KEY)
+}
+
 // ── نظام الحصص المجانية العام (لكل ميزة) ─────────────────────────────
 // مفتاح الفترة الحالية: تاريخ اليوم للحد اليومي، أو دلو ٧ أيام للحد الأسبوعي
 function periodKey(period: 'day' | 'week'): string {

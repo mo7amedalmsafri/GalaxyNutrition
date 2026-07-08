@@ -12,7 +12,8 @@ import { createClient } from '@/lib/supabase/client'
 import { saveProfileToSupabase } from '@/lib/db'
 import { calculateBMI, calculateDailyCalories } from '@/lib/utils'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp } from '@/lib/store'
-import { isProUser, activatePro, deactivatePro, isAdmin } from '@/lib/limits'
+import { isProUser, activatePro, deactivatePro, isAdmin, setProLocal } from '@/lib/limits'
+import { purchasePro, restorePurchases, getProPrice, checkProEntitlement, purchasesAvailable } from '@/lib/purchases'
 
 // ── Types ────────────────────────────────────────────────────────────
 interface FieldProps {
@@ -110,6 +111,11 @@ export default function SettingsPage() {
   const [stripeActive, setStripeActive] = useState(false)   // paid via Stripe
   const [subLoading, setSubLoading]     = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
+  // Apple IAP (تطبيق iOS)
+  const [iapLoading, setIapLoading]     = useState(false)
+  const [iapError, setIapError]         = useState('')
+  const [iapPrice, setIapPrice]         = useState<string | null>(null)
+  const [restoring, setRestoring]       = useState(false)
 
   // ── Pro / Subscription ──────────────────────────────────────────
   useEffect(() => {
@@ -135,6 +141,33 @@ export default function SettingsPage() {
       }
     })
   }, [])
+
+  // ── Apple IAP: مزامنة الاشتراك وجلب السعر (داخل تطبيق iOS فقط) ──
+  useEffect(() => {
+    if (!purchasesAvailable()) return
+    getProPrice().then(p => { if (p) setIapPrice(p) })
+    checkProEntitlement().then(active => {
+      if (active) { setProLocal(true); setProActive(true) }
+    })
+  }, [])
+
+  const handleNativeSubscribe = async () => {
+    setIapLoading(true); setIapError('')
+    const res = await purchasePro()
+    if (res.ok) { setProLocal(true); setProActive(true) }
+    else if (!res.cancelled) {
+      setIapError(t('تعذّر إتمام الشراء، حاول مرة أخرى', 'Purchase failed, please try again'))
+    }
+    setIapLoading(false)
+  }
+
+  const handleRestore = async () => {
+    setRestoring(true); setIapError('')
+    const ok = await restorePurchases()
+    if (ok) { setProLocal(true); setProActive(true) }
+    else setIapError(t('لا يوجد اشتراك سابق لاستعادته', 'No previous subscription to restore'))
+    setRestoring(false)
+  }
 
   const handleUpgrade = async () => {
     setSubLoading(true)
@@ -623,7 +656,63 @@ export default function SettingsPage() {
           )}
         </div>
 
-      ) : isNativeApp ? null : (
+      ) : isNativeApp ? (
+        /* ── Native IAP Upgrade Card (Apple In-App Purchase) ── */
+        <div id="pro" className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(245,158,11,0.25)' }}>
+          <div className="p-5 flex flex-col gap-4"
+            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(251,191,36,0.04))' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
+                  style={{ background: 'rgba(245,158,11,0.12)' }}>⭐</div>
+                <div>
+                  <p className="font-black text-base text-white">Dietak Pro</p>
+                  <p className="text-xs text-white/40">{t('اشتراك شهري', 'Monthly subscription')}</p>
+                </div>
+              </div>
+              {iapPrice && (
+                <div className="text-right">
+                  <p className="text-xl font-black" style={{ color: '#f59e0b' }}>{iapPrice}</p>
+                  <p className="text-xs text-white/40">{t('/ شهر', '/ mo')}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: '📷', ar: 'تصوير غير محدود',   en: 'Unlimited scans' },
+                { icon: '📋', ar: 'خطط غذائية ∞',      en: 'Unlimited plans' },
+                { icon: '🏋️', ar: 'خطط تمارين ∞',      en: 'Unlimited workouts' },
+                { icon: '🚫', ar: 'بدون إعلانات',       en: 'No ads' },
+              ].map(b => (
+                <div key={b.en} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(245,158,11,0.06)' }}>
+                  <span className="text-sm">{b.icon}</span>
+                  <span className="text-xs text-white/60">{t(b.ar, b.en)}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleNativeSubscribe}
+              disabled={iapLoading}
+              className="w-full py-4 rounded-2xl font-black text-base disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', color: '#09090D' }}>
+              {iapLoading
+                ? t('جارٍ المعالجة...', 'Processing...')
+                : t('⭐ اشترك الآن', '⭐ Subscribe Now')}
+            </button>
+
+            {iapError && <p className="text-xs text-center" style={{ color: '#ef4444' }}>✗ {iapError}</p>}
+
+            <button onClick={handleRestore} disabled={restoring}
+              className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {restoring ? t('...', '...') : t('استعادة المشتريات', 'Restore Purchases')}
+            </button>
+          </div>
+        </div>
+
+      ) : (
         /* ── Upgrade Card — web only (App Store rule 3.1.1: no external payments in-app) ── */
         <div className="rounded-2xl overflow-hidden"
           style={{ border: '1px solid rgba(245,158,11,0.25)' }}>
