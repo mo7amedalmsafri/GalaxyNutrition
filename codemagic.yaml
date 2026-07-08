@@ -40,9 +40,10 @@ workflows:
 
       - name: Set up automatic code signing
         script: |
-          # Order matters: init keychain FIRST, then fetch (and create if
-          # missing) the distribution certificate + provisioning profile,
-          # then load them into the keychain.
+          # Automatic signing: init keychain, then create+download the
+          # distribution certificate and App Store profile, then apply.
+          # Requires the App Store Connect API key to have the Admin role
+          # (App Manager cannot create signing certificates).
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
