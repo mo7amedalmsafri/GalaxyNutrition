@@ -50,28 +50,27 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
       })
       if (!res.ok) throw new Error('failed')
       const data = await res.json()
-      const n = data.nutrition ?? {}
-      // الوزن الفعلي للكمية الموصوفة — تُفتح النافذة على هذه الكمية
-      if (typeof data.totalGrams === 'number' && data.totalGrams > 0) {
-        setAiQuantity(data.totalGrams)
-      } else {
-        setAiQuantity(100)
-      }
+      const n = data.nutrition ?? {}        // لكل 100جم
+      const g = typeof data.totalGrams === 'number' && data.totalGrams > 0 ? data.totalGrams : 100
+      const f = g / 100                       // معامل التحويل إلى القيم الإجمالية
+      const r = (v: number) => Math.round((v ?? 0) * f * 10) / 10
+      setAiQuantity(Math.round(g))
+      // نمرّر القيم الإجمالية للكمية الموصوفة (لا لكل 100جم)
       setSelectedFood({
         id: 'ai-' + Date.now(),
         name: data.name ?? foodName,
         nameAr: (lang === 'en' ? (data.name ?? foodName) : (data.nameAr ?? foodName)),
         emoji: '🍽️',
-        calories: n.calories ?? 0,
-        protein: n.protein ?? 0,
-        carbs: n.carbs ?? 0,
-        fiber: n.fiber ?? 0,
-        sugars: n.sugars ?? 0,
-        fat: n.fat ?? 0,
-        saturatedFat: n.saturatedFat ?? 0,
-        unsaturatedFat: n.unsaturatedFat ?? 0,
-        sodium: n.sodium ?? 0,
-        potassium: n.potassium ?? 0,
+        calories: r(n.calories),
+        protein: r(n.protein),
+        carbs: r(n.carbs),
+        fiber: r(n.fiber),
+        sugars: r(n.sugars),
+        fat: r(n.fat),
+        saturatedFat: r(n.saturatedFat),
+        unsaturatedFat: r(n.unsaturatedFat),
+        sodium: r(n.sodium),
+        potassium: r(n.potassium),
       } as FoodDBItem)
       setIsOpen(false)
     } catch (e) {
@@ -172,7 +171,7 @@ export default function FoodSearchBar({ onAddFood }: FoodSearchBarProps) {
             {results.map(food => (
               <button
                 key={food.id}
-                onClick={() => { setSelectedFood({ ...food, nameAr: lang === 'en' ? food.name : food.nameAr }); setIsOpen(false) }}
+                onClick={() => { setAiQuantity(100); setSelectedFood({ ...food, nameAr: lang === 'en' ? food.name : food.nameAr }); setIsOpen(false) }}
                 className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl transition-all active:scale-95"
                 style={{
                   background: cardBg,
