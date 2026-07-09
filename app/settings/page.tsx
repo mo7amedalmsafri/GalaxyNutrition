@@ -156,7 +156,8 @@ export default function SettingsPage() {
     const res = await purchasePro()
     if (res.ok) { setProLocal(true); setProActive(true) }
     else if (!res.cancelled) {
-      setIapError(t('تعذّر إتمام الشراء، حاول مرة أخرى', 'Purchase failed, please try again'))
+      // نعرض تفصيل الخطأ الفعلي لتشخيص المشكلة
+      setIapError(`تعذّر الشراء: ${res.error || 'خطأ غير معروف'}`)
     }
     setIapLoading(false)
   }
