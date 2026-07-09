@@ -54,7 +54,14 @@ workflows:
       - name: Increment build number
         script: |
           cd ios/App
-          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+          # نأخذ الأعلى بين آخر رقم مرفوع ورقم بناء Codemagic، ثم نزيد 1 —
+          # يضمن أن الرقم دائماً أعلى من السابق (يصلح خطأ "duplicate build version")
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0)
+          BASE=${BUILD_NUMBER:-0}
+          if [ "$LATEST" -gt "$BASE" ]; then BASE=$LATEST; fi
+          NEXT=$((BASE + 1))
+          echo "Setting build number to $NEXT (latest uploaded=$LATEST, codemagic=$BUILD_NUMBER)"
+          agvtool new-version -all "$NEXT"
 
       - name: Build IPA
         script: |
