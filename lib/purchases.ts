@@ -9,8 +9,13 @@
 import { Capacitor } from '@capacitor/core'
 
 const RC_KEY = process.env.NEXT_PUBLIC_REVENUECAT_IOS_KEY ?? ''
-const ENTITLEMENT = 'pro'
 let configured = false
+
+// التطبيق عنده صلاحية واحدة فقط (Pro)، فأي صلاحية فعّالة = مشترك.
+// هذا يتجنّب الاعتماد على تطابق اسم الـ entitlement بالضبط.
+function hasActiveEntitlement(customerInfo: { entitlements?: { active?: Record<string, unknown> } }): boolean {
+  return Object.keys(customerInfo?.entitlements?.active ?? {}).length > 0
+}
 
 /** هل نعمل داخل تطبيق iOS الأصلي؟ */
 export function isNativeIOS(): boolean {
@@ -44,7 +49,7 @@ export async function checkProEntitlement(): Promise<boolean> {
     await ensureConfigured()
     const Purchases = await rc()
     const { customerInfo } = await Purchases.getCustomerInfo()
-    return !!customerInfo.entitlements.active[ENTITLEMENT]
+    return hasActiveEntitlement(customerInfo)
   } catch {
     return false
   }
@@ -63,7 +68,7 @@ export async function purchasePro(): Promise<PurchaseResult> {
     const pkg = offerings.current?.availablePackages?.[0]
     if (!pkg) return { ok: false, error: 'no-offering' }
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg })
-    return { ok: !!customerInfo.entitlements.active[ENTITLEMENT] }
+    return { ok: hasActiveEntitlement(customerInfo) }
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string; userCancelled?: boolean }
     if (err?.userCancelled || err?.code === 'PURCHASE_CANCELLED' || /cancel/i.test(err?.message ?? '')) {
@@ -80,7 +85,7 @@ export async function restorePurchases(): Promise<boolean> {
     await ensureConfigured()
     const Purchases = await rc()
     const { customerInfo } = await Purchases.restorePurchases()
-    return !!customerInfo.entitlements.active[ENTITLEMENT]
+    return hasActiveEntitlement(customerInfo)
   } catch {
     return false
   }
