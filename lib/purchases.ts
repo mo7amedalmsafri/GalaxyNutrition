@@ -65,7 +65,12 @@ export async function purchasePro(): Promise<PurchaseResult> {
     await ensureConfigured()
     const Purchases = await rc()
     const offerings = await Purchases.getOfferings()
-    const pkg = offerings.current?.availablePackages?.[0]
+    const pkgs = offerings.current?.availablePackages ?? []
+    // نختار باقة منتجنا الشهري تحديداً، وإلا الباقة الشهرية، وإلا الأولى
+    const pkg =
+      pkgs.find(p => p.product?.identifier === 'dietak_pro_monthly') ??
+      pkgs.find(p => p.packageType === 'MONTHLY') ??
+      pkgs[0]
     if (!pkg) return { ok: false, error: 'no-offering' }
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg })
     return { ok: hasActiveEntitlement(customerInfo) }
