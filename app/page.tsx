@@ -13,7 +13,7 @@ import FoodEntryModal from '@/components/FoodEntryModal'
 import FoodSearchBar from '@/components/FoodSearchBar'
 import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp } from '@/lib/store'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, useInboxUnread } from '@/lib/store'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
 import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover, xpMultiplier } from '@/lib/gamification'
@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [todayFoods, setTodayFoods] = useState<FoodItem[]>([])
   const [editingFood, setEditingFood] = useState<FoodItem | null>(null)
   const savedMeals = useSavedMeals()
+  const inboxUnread = useInboxUnread()
   const [waterMl, setWaterMlState] = useState(0)
   const [weightHistory, setWeightHistory] = useState(WEIGHT_HISTORY_FALLBACK)
   const [showFoodModal, setShowFoodModal] = useState(false)
@@ -335,6 +336,17 @@ export default function Dashboard() {
               style={{ background: '#f59e0b' }}>
               <Gift size={11} color="#09090D" />
             </span>
+          </button>
+          {/* Inbox bell */}
+          <button onClick={() => router.push('/inbox')}
+            className="relative w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
+            style={{ background: isLight ? '#ffffff' : 'rgba(255,255,255,0.07)' }}
+            aria-label={t('صندوق الوارد', 'Inbox')}>
+            <Bell size={19} color={isLight ? '#1a1a1a' : '#fff'} />
+            {inboxUnread > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-black text-white"
+                style={{ background: '#ef4444' }}>{inboxUnread}</span>
+            )}
           </button>
           <button
             onClick={() => setShowDrawer(true)}

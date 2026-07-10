@@ -3,6 +3,23 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { isProUser, trialDaysLeft, hasPremiumAccess } from '@/lib/limits'
 
+/** عدد رسائل الوارد غير المقروءة (رسائل الأدمن/البث بعد آخر فتح للصندوق) */
+export function useInboxUnread(): number {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    let seen = 0
+    try { seen = new Date(localStorage.getItem('dietak-inbox-seen') || 0).getTime() } catch {}
+    fetch('/api/inbox')
+      .then(r => r.ok ? r.json() : { messages: [] })
+      .then(d => {
+        const n = (d.messages ?? []).filter((m: { created_at: string }) => new Date(m.created_at).getTime() > seen).length
+        setCount(n)
+      })
+      .catch(() => {})
+  }, [])
+  return count
+}
+
 /** بريد المستخدم الحالي (لفحص حالة الاشتراك/المشرف) — null قبل التحميل أو بلا جلسة */
 export function useUserEmail(): string | null {
   const [email, setEmail] = useState<string | null>(null)

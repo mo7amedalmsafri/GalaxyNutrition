@@ -563,6 +563,12 @@ export default function SettingsPage() {
 
       {/* ── Support & Legal ── */}
       <SettingsSection title={t('الدعم والقانوني', 'Support & Legal')}>
+        <button onClick={() => router.push('/inbox')}
+          className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+          <Bell size={18} color="rgba(245,158,11,0.8)" className="flex-shrink-0" />
+          <span className="text-sm text-white/70 flex-1 text-start">{t('صندوق الوارد', 'Inbox')}</span>
+          <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
+        </button>
         <button onClick={() => router.push('/contact')}
           className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
           <MessageSquare size={18} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />
