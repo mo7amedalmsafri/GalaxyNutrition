@@ -35,10 +35,28 @@ export function purchasesAvailable(): boolean {
   return isNativeIOS() && !!RC_KEY
 }
 
-// تحميل الإضافة عند الحاجة فقط (يبقي حزمة الويب نظيفة)
-async function rc() {
+// ── أنواع مبسّطة لما نستخدمه من الجسر ────────────────────────────────
+interface RCPackage { packageType?: string; product?: { identifier?: string; priceString?: string } }
+interface RCOfferings { current?: { availablePackages?: RCPackage[] } | null; all?: Record<string, unknown> }
+interface RCCustomerInfoWrap { customerInfo: { entitlements?: { active?: Record<string, unknown> } } }
+interface PurchasesAPI {
+  configure(o: { apiKey: string }): void | Promise<void>
+  isConfigured(): Promise<{ isConfigured: boolean }>
+  getCustomerInfo(): Promise<RCCustomerInfoWrap>
+  getOfferings(): Promise<RCOfferings>
+  purchasePackage(o: { aPackage: RCPackage }): Promise<RCCustomerInfoWrap>
+  restorePurchases(): Promise<RCCustomerInfoWrap>
+}
+
+// المسار المباشر عبر الجسر المحقون — النداءات عبر وسيط npm تعلّق مع
+// الرابط البعيد (ازدواج نسخ @capacitor/core)، بينما البروكسي المباشر يعمل.
+// التشخيص أثبت: isCfg عبر window.Capacitor.Plugins.Purchases يرد فوراً.
+async function rc(): Promise<PurchasesAPI> {
+  const w = window as unknown as { Capacitor?: { Plugins?: Record<string, unknown> } }
+  const direct = w.Capacitor?.Plugins?.Purchases as PurchasesAPI | undefined
+  if (direct && typeof direct.getOfferings === 'function') return direct
   const mod = await import('@revenuecat/purchases-capacitor')
-  return mod.Purchases
+  return mod.Purchases as unknown as PurchasesAPI
 }
 
 // وعد مشترك يمنع استدعاء configure أكثر من مرة في نفس الوقت (سباق)
@@ -48,15 +66,14 @@ async function ensureConfigured(): Promise<void> {
   if (!configurePromise) {
     configurePromise = (async () => {
       const Purchases = await rc()
-      // أحياناً وعد configure لا يرجع رغم نجاح التهيئة فعلياً (خلل جسر معروف)
-      // فنطلقه بلا انتظار، ثم نستعلم isConfigured دورياً كبديل موثوق
-      Purchases.configure({ apiKey: RC_KEY }).then(() => { configured = true }).catch(() => {})
-      for (let i = 0; i < 24 && !configured; i++) {
+      // configure نوعها fire-and-forget — نطلقها ثم نتحقق عبر isConfigured
+      try { await Promise.resolve(Purchases.configure({ apiKey: RC_KEY })) } catch { /* ignore */ }
+      for (let i = 0; i < 20 && !configured; i++) {
         try {
-          const r = await Purchases.isConfigured()
+          const r = await withTimeout(Purchases.isConfigured(), 3000, 'isConfigured')
           if (r?.isConfigured) { configured = true; break }
         } catch { /* ignore */ }
-        await new Promise(res => setTimeout(res, 500))
+        await new Promise(res => setTimeout(res, 400))
       }
       if (!configured) throw new Error('configure-failed')
     })().catch(e => { configurePromise = null; throw e })
