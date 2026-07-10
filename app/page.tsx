@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil } from 'lucide-react'
+import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil, Gift } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import BMICircle from '@/components/BMICircle'
 import CalorieRing from '@/components/CalorieRing'
@@ -303,7 +303,7 @@ export default function Dashboard() {
                 border:      `1px solid ${levelInfo.color}40`,
               }}
             >
-              {levelInfo.icon} {lang === 'en' ? levelInfo.nameEn : levelInfo.name}
+              {t('مستوى', 'Lv')} {levelInfo.level} · {lang === 'en' ? levelInfo.nameEn : levelInfo.name}
             </span>
             <span className="text-[11px] text-white/30 flex-shrink-0">
               {currentXp} XP
@@ -331,7 +331,10 @@ export default function Dashboard() {
           <button onClick={() => router.push('/rewards')} className="relative active:scale-95 transition-transform"
             aria-label={t('الجوائز والمستويات', 'Rewards & levels')}>
             <LevelRing xp={currentXp} size={50} />
-            <span className="absolute -top-1 -right-1 text-xs">🎁</span>
+            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+              style={{ background: '#f59e0b' }}>
+              <Gift size={11} color="#09090D" />
+            </span>
           </button>
           <button
             onClick={() => setShowDrawer(true)}

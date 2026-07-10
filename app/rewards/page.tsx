@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Lock, Check, Gift } from 'lucide-react'
+import { ChevronRight, Lock, Check, Gift, Zap, Percent } from 'lucide-react'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useLang } from '@/lib/store'
 import { LEVELS, getCurrentLevel, getLevelProgress, getXpToNextLevel } from '@/lib/gamification'
-import { rewardAt, claimReward, claimedLevels } from '@/lib/rewards'
+import { rewardAt, claimReward, claimedLevels, type Reward } from '@/lib/rewards'
+
+// أيقونة SVG نظيفة لكل نوع جائزة (بدون إيموجي)
+function RewardIcon({ reward, size = 13 }: { reward: Reward; size?: number }) {
+  if (reward.type === 'xp_boost') return <Zap size={size} />
+  if (reward.type === 'discount') return <Percent size={size} />
+  return <Gift size={size} />
+}
 
 export default function RewardsPage() {
   const t = useT()
@@ -36,8 +43,7 @@ export default function RewardsPage() {
     setTimeout(() => setToast(''), 3500)
   }
 
-  // من الأعلى (٢٠) للأسفل (١) — المستوى ١ تحت
-  const levelsDesc = [...LEVELS].reverse()
+  const levelsDesc = [...LEVELS].reverse()   // ٢٠ فوق → ١ تحت
 
   return (
     <div className="min-h-screen px-4 py-6"
@@ -53,10 +59,12 @@ export default function RewardsPage() {
         </div>
 
         {/* Current level summary */}
-        <div className="rounded-2xl p-4 mb-5 flex items-center gap-4"
+        <div className="rounded-2xl p-4 mb-6 flex items-center gap-4"
           style={{ background: `${cur.color}18`, border: `1px solid ${cur.color}40` }}>
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-            style={{ background: `${cur.color}25` }}>{cur.icon}</div>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: `${cur.color}25`, border: `2px solid ${cur.color}` }}>
+            <span className="text-2xl font-black" style={{ color: cur.color }}>{curLevel}</span>
+          </div>
           <div className="flex-1 min-w-0">
             <p className="font-black text-lg" style={{ color: cur.color }}>
               {t('المستوى', 'Level')} {curLevel} · {lang === 'en' ? cur.nameEn : cur.name}
@@ -70,7 +78,7 @@ export default function RewardsPage() {
           </div>
         </div>
 
-        {/* ── The path (central spine + branches) ── */}
+        {/* ── The path (central spine + short branches) ── */}
         <div dir="ltr" className="relative">
           {levelsDesc.map(info => {
             const lvl = info.level
@@ -83,37 +91,37 @@ export default function RewardsPage() {
             const lineCol = unlocked ? info.color : 'rgba(255,255,255,0.08)'
 
             const node = (
-              <div className="flex flex-col items-center justify-center flex-shrink-0 rounded-full"
+              <div className="flex items-center justify-center flex-shrink-0 rounded-full"
                 style={{
-                  width: 58, height: 58,
-                  background: unlocked ? `${info.color}25` : 'rgba(255,255,255,0.05)',
-                  border: `2px solid ${unlocked ? info.color : 'rgba(255,255,255,0.12)'}`,
-                  boxShadow: isCurrent ? `0 0 0 4px ${info.color}40, 0 0 22px ${info.color}70` : 'none',
-                  opacity: unlocked ? 1 : 0.6,
+                  width: 50, height: 50,
+                  background: unlocked ? `${info.color}22` : 'rgba(255,255,255,0.04)',
+                  border: `2px solid ${unlocked ? info.color : 'rgba(255,255,255,0.14)'}`,
+                  boxShadow: isCurrent ? `0 0 0 4px ${info.color}33, 0 0 20px ${info.color}66` : 'none',
                 }}>
-                <span className="text-lg leading-none">{unlocked ? info.icon : '🔒'}</span>
-                <span className="text-[10px] font-black mt-0.5" style={{ color: unlocked ? info.color : 'rgba(255,255,255,0.4)' }}>{lvl}</span>
+                {unlocked
+                  ? <span className="text-base font-black" style={{ color: info.color }}>{lvl}</span>
+                  : <Lock size={16} color="rgba(255,255,255,0.3)" />}
               </div>
             )
 
-            const connector = <div style={{ width: 26, height: 6, background: lineCol, flexShrink: 0 }} />
+            const connector = <div style={{ width: 14, height: 5, background: lineCol, flexShrink: 0 }} />
 
             const rewardBox = reward ? (
               <div className="rounded-xl px-3 py-2" dir={lang === 'en' ? 'ltr' : 'rtl'}
                 style={{
-                  maxWidth: 150,
-                  background: canClaim ? 'rgba(245,158,11,0.15)' : isClaimedR ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${canClaim ? 'rgba(245,158,11,0.5)' : isClaimedR ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  maxWidth: 156,
+                  background: canClaim ? 'rgba(245,158,11,0.14)' : isClaimedR ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${canClaim ? 'rgba(245,158,11,0.45)' : isClaimedR ? 'rgba(16,185,129,0.28)' : 'rgba(255,255,255,0.09)'}`,
                 }}>
-                <p className="text-[11px] font-bold flex items-center gap-1"
-                  style={{ color: canClaim ? '#f59e0b' : isClaimedR ? '#10b981' : 'rgba(255,255,255,0.6)' }}>
-                  <span>{reward.icon}</span> {lang === 'en' ? reward.en : reward.ar}
+                <p className="text-[11px] font-bold flex items-center gap-1.5 leading-tight"
+                  style={{ color: canClaim ? '#f59e0b' : isClaimedR ? '#10b981' : 'rgba(255,255,255,0.55)' }}>
+                  <RewardIcon reward={reward} /> {lang === 'en' ? reward.en : reward.ar}
                 </p>
                 {canClaim && reward.type === 'discount' ? (
                   <p className="text-[10px] mt-1 font-bold" style={{ color: '#f59e0b' }}>{t('متاح قريباً', 'Coming soon')}</p>
                 ) : canClaim ? (
                   <button onClick={() => doClaim(lvl)} className="mt-1.5 w-full py-1 rounded-lg text-[11px] font-black"
-                    style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', color: '#09090D' }}>{t('استلم 🎁', 'Claim 🎁')}</button>
+                    style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', color: '#09090D' }}>{t('استلم', 'Claim')}</button>
                 ) : isClaimedR ? (
                   <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: '#10b981' }}><Check size={11} /> {t('مستلَمة', 'Claimed')}</p>
                 ) : (
@@ -128,9 +136,9 @@ export default function RewardsPage() {
 
             return (
               <div key={lvl} id={`lvl-${lvl}`} className="grid items-center"
-                style={{ gridTemplateColumns: '1fr 6px 1fr', minHeight: 100 }}>
+                style={{ gridTemplateColumns: '1fr 5px 1fr', minHeight: 84 }}>
                 <div className="col-start-1 flex justify-end items-center">{onLeft && group}</div>
-                <div className="col-start-2 self-stretch justify-self-center" style={{ width: 6, background: lineCol }} />
+                <div className="col-start-2 self-stretch justify-self-center" style={{ width: 5, background: lineCol }} />
                 <div className="col-start-3 flex justify-start items-center">{!onLeft && group}</div>
               </div>
             )
@@ -138,8 +146,8 @@ export default function RewardsPage() {
         </div>
 
         <p className="text-center text-white/30 text-xs mt-6 mb-4">
-          {t('اجمع نقاط XP بتسجيل وجباتك وتمارينك لترتقي في المستويات 🚀',
-             'Earn XP by logging meals & workouts to climb levels 🚀')}
+          {t('اجمع نقاط XP بتسجيل وجباتك وتمارينك لترتقي في المستويات',
+             'Earn XP by logging meals & workouts to climb levels')}
         </p>
       </div>
 
@@ -149,7 +157,7 @@ export default function RewardsPage() {
           style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', boxShadow: '0 8px 40px rgba(245,158,11,0.5)' }}>
           <Gift size={26} color="#09090D" />
           <div>
-            <p className="font-black text-sm" style={{ color: '#09090D' }}>{t('مبروك! 🎉', 'Unlocked! 🎉')}</p>
+            <p className="font-black text-sm" style={{ color: '#09090D' }}>{t('مبروك!', 'Unlocked!')}</p>
             <p className="text-xs font-bold" style={{ color: '#09090D' }}>{toast}</p>
           </div>
         </div>
