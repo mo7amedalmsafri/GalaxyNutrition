@@ -25,6 +25,11 @@ export function isNativeIOS(): boolean {
   } catch { return false }
 }
 
+/** هل إضافة RevenueCat الأصلية مُضمّنة في البناء ومسجّلة؟ */
+export function nativePluginPresent(): boolean {
+  try { return Capacitor.isPluginAvailable('Purchases') } catch { return false }
+}
+
 /** هل ميزة الشراء متاحة (تطبيق أصلي + مفتاح مضبوط)؟ */
 export function purchasesAvailable(): boolean {
   return isNativeIOS() && !!RC_KEY
@@ -70,6 +75,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 export async function purchasePro(): Promise<PurchaseResult> {
   if (!isNativeIOS()) return { ok: false, error: 'not-native' }
   if (!RC_KEY) return { ok: false, error: 'no-key' }
+  if (!nativePluginPresent()) return { ok: false, error: 'plugin-missing (بناء قديم؟)' }
   try {
     await withTimeout(ensureConfigured(), 8000, 'configure')
     const Purchases = await rc()
