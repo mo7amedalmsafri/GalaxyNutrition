@@ -24,7 +24,6 @@ export default function RewardsPage() {
 
   useEffect(() => { setClaimed(claimedLevels()) }, [])
   useEffect(() => {
-    // ينزل تلقائياً لمستواك الحالي عند الفتح
     const el = document.getElementById(`lvl-${curLevel}`)
     if (el) setTimeout(() => el.scrollIntoView({ block: 'center' }), 60)
   }, [curLevel])
@@ -71,8 +70,8 @@ export default function RewardsPage() {
           </div>
         </div>
 
-        {/* ── The path ── */}
-        <div className="relative">
+        {/* ── The path (central spine + branches) ── */}
+        <div dir="ltr" className="relative">
           {levelsDesc.map(info => {
             const lvl = info.level
             const unlocked = curLevel >= lvl
@@ -80,67 +79,59 @@ export default function RewardsPage() {
             const reward = rewardAt(lvl)
             const isClaimedR = claimed.includes(lvl)
             const canClaim = !!reward && unlocked && !isClaimedR
-            const left = lvl % 2 === 0   // تناوب الجهة
+            const onLeft = lvl % 2 === 0
+            const lineCol = unlocked ? info.color : 'rgba(255,255,255,0.08)'
+
+            const node = (
+              <div className="flex flex-col items-center justify-center flex-shrink-0 rounded-full"
+                style={{
+                  width: 58, height: 58,
+                  background: unlocked ? `${info.color}25` : 'rgba(255,255,255,0.05)',
+                  border: `2px solid ${unlocked ? info.color : 'rgba(255,255,255,0.12)'}`,
+                  boxShadow: isCurrent ? `0 0 0 4px ${info.color}40, 0 0 22px ${info.color}70` : 'none',
+                  opacity: unlocked ? 1 : 0.6,
+                }}>
+                <span className="text-lg leading-none">{unlocked ? info.icon : '🔒'}</span>
+                <span className="text-[10px] font-black mt-0.5" style={{ color: unlocked ? info.color : 'rgba(255,255,255,0.4)' }}>{lvl}</span>
+              </div>
+            )
+
+            const connector = <div style={{ width: 26, height: 6, background: lineCol, flexShrink: 0 }} />
+
+            const rewardBox = reward ? (
+              <div className="rounded-xl px-3 py-2" dir={lang === 'en' ? 'ltr' : 'rtl'}
+                style={{
+                  maxWidth: 150,
+                  background: canClaim ? 'rgba(245,158,11,0.15)' : isClaimedR ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${canClaim ? 'rgba(245,158,11,0.5)' : isClaimedR ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                }}>
+                <p className="text-[11px] font-bold flex items-center gap-1"
+                  style={{ color: canClaim ? '#f59e0b' : isClaimedR ? '#10b981' : 'rgba(255,255,255,0.6)' }}>
+                  <span>{reward.icon}</span> {lang === 'en' ? reward.en : reward.ar}
+                </p>
+                {canClaim && reward.type === 'discount' ? (
+                  <p className="text-[10px] mt-1 font-bold" style={{ color: '#f59e0b' }}>{t('متاح قريباً', 'Coming soon')}</p>
+                ) : canClaim ? (
+                  <button onClick={() => doClaim(lvl)} className="mt-1.5 w-full py-1 rounded-lg text-[11px] font-black"
+                    style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', color: '#09090D' }}>{t('استلم 🎁', 'Claim 🎁')}</button>
+                ) : isClaimedR ? (
+                  <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: '#10b981' }}><Check size={11} /> {t('مستلَمة', 'Claimed')}</p>
+                ) : (
+                  <p className="text-[10px] mt-1 flex items-center gap-1 text-white/35"><Lock size={10} /> {t('مقفلة', 'Locked')}</p>
+                )}
+              </div>
+            ) : null
+
+            const group = onLeft
+              ? <div className="flex items-center gap-2">{rewardBox}{node}{connector}</div>
+              : <div className="flex items-center gap-2">{connector}{node}{rewardBox}</div>
 
             return (
-              <div key={lvl} id={`lvl-${lvl}`} className="relative flex items-center" style={{ minHeight: 104 }}>
-                {/* spine segment */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[6px]"
-                  style={{ background: unlocked ? info.color : 'rgba(255,255,255,0.07)' }} />
-
-                {/* row content pushed to one side */}
-                <div className="relative z-10 w-full flex" style={{ justifyContent: left ? 'flex-start' : 'flex-end' }}>
-                  <div className="flex items-center gap-3" style={{ flexDirection: left ? 'row' : 'row-reverse' }}>
-
-                    {/* node circle */}
-                    <div className="flex flex-col items-center justify-center flex-shrink-0 rounded-full"
-                      style={{
-                        width: 62, height: 62,
-                        background: unlocked ? `${info.color}25` : 'rgba(255,255,255,0.05)',
-                        border: `2px solid ${unlocked ? info.color : 'rgba(255,255,255,0.12)'}`,
-                        boxShadow: isCurrent ? `0 0 0 4px ${info.color}40, 0 0 22px ${info.color}70` : 'none',
-                        opacity: unlocked ? 1 : 0.55,
-                      }}>
-                      <span className="text-xl leading-none">{unlocked ? info.icon : '🔒'}</span>
-                      <span className="text-[10px] font-black mt-0.5" style={{ color: unlocked ? info.color : 'rgba(255,255,255,0.4)' }}>
-                        {lvl}
-                      </span>
-                    </div>
-
-                    {/* reward chip */}
-                    {reward && (
-                      <div className="rounded-xl px-3 py-2 max-w-[180px]"
-                        style={{
-                          background: canClaim ? 'rgba(245,158,11,0.15)' : isClaimedR ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
-                          border: `1px solid ${canClaim ? 'rgba(245,158,11,0.5)' : isClaimedR ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                        }}>
-                        <p className="text-xs font-bold flex items-center gap-1"
-                          style={{ color: canClaim ? '#f59e0b' : isClaimedR ? '#10b981' : 'rgba(255,255,255,0.6)' }}>
-                          <span>{reward.icon}</span> {lang === 'en' ? reward.en : reward.ar}
-                        </p>
-                        {canClaim && reward.type === 'discount' ? (
-                          <p className="text-[10px] mt-1 font-bold" style={{ color: '#f59e0b' }}>
-                            {t('متاح قريباً عبر الاشتراك', 'Coming soon via subscription')}
-                          </p>
-                        ) : canClaim ? (
-                          <button onClick={() => doClaim(lvl)}
-                            className="mt-1.5 w-full py-1 rounded-lg text-xs font-black"
-                            style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', color: '#09090D' }}>
-                            {t('استلم 🎁', 'Claim 🎁')}
-                          </button>
-                        ) : isClaimedR ? (
-                          <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: '#10b981' }}>
-                            <Check size={11} /> {t('مستلَمة', 'Claimed')}
-                          </p>
-                        ) : (
-                          <p className="text-[10px] mt-1 flex items-center gap-1 text-white/35">
-                            <Lock size={10} /> {t(`تفتح بالمستوى ${lvl}`, `Unlocks at level ${lvl}`)}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <div key={lvl} id={`lvl-${lvl}`} className="grid items-center"
+                style={{ gridTemplateColumns: '1fr 6px 1fr', minHeight: 100 }}>
+                <div className="col-start-1 flex justify-end items-center">{onLeft && group}</div>
+                <div className="col-start-2 self-stretch justify-self-center" style={{ width: 6, background: lineCol }} />
+                <div className="col-start-3 flex justify-start items-center">{!onLeft && group}</div>
               </div>
             )
           })}
