@@ -115,8 +115,19 @@ export async function purchasePro(): Promise<PurchaseResult> {
     if (err?.userCancelled || err?.code === 'PURCHASE_CANCELLED' || /cancel/i.test(err?.message ?? '')) {
       return { ok: false, cancelled: true }
     }
-    return { ok: false, error: err?.message ?? 'purchase-failed' }
+    return { ok: false, error: `${err?.message ?? 'purchase-failed'} | ${bridgeDiag()}` }
   }
+}
+
+// تشخيص حالة جسر Capacitor — يُلحق برسالة الخطأ لتحديد مكان العطل
+function bridgeDiag(): string {
+  try {
+    const w = window as unknown as { Capacitor?: { Plugins?: Record<string, unknown>; getPlatform?: () => string } }
+    const cap = w.Capacitor
+    if (!cap) return 'noCap'
+    const plugins = cap.Plugins ? Object.keys(cap.Plugins).join(',') : 'noPlugins'
+    return `platform=${cap.getPlatform?.()} avail=${Capacitor.isPluginAvailable('Purchases')} plugins=[${plugins}]`
+  } catch (e) { return 'diag-err:' + (e as Error).message }
 }
 
 /** يستعيد المشتريات السابقة (عند تغيير الجهاز / إعادة التثبيت) */
