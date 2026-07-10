@@ -25,7 +25,7 @@ export default function BottomNav() {
   const centerLabel   = isLight ? 'rgba(30,30,50,0.42)'  : 'rgba(255,255,255,0.45)'
 
   return (
-    <nav className="nav-bar fixed bottom-0 left-0 right-0 z-50 pb-safe">
+    <nav data-tour="nav" className="nav-bar fixed bottom-0 left-0 right-0 z-50 pb-safe">
       <div className="flex items-center justify-around px-1 h-20">
         {NAV_ITEMS.map(({ href, icon: Icon, ar, en, isCenter }) => {
           const isActive = pathname === href
@@ -33,7 +33,7 @@ export default function BottomNav() {
 
           if (isCenter) {
             return (
-              <Link key={href} href={href} className="flex flex-col items-center -mt-7 flex-1">
+              <Link key={href} href={href} data-tour="scan" className="flex flex-col items-center -mt-7 flex-1">
                 <div
                   className="fab-button flex items-center justify-center"
                   style={{

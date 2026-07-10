@@ -569,6 +569,12 @@ export default function SettingsPage() {
           <span className="text-sm text-white/70 flex-1 text-start">{t('صندوق الوارد', 'Inbox')}</span>
           <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
         </button>
+        <button onClick={() => { try { localStorage.removeItem('dietak-tour-done') } catch {}; router.push('/') }}
+          className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
+          <Info size={18} color="rgba(0,212,255,0.7)" className="flex-shrink-0" />
+          <span className="text-sm text-white/70 flex-1 text-start">{t('الجولة التعريفية', 'App Tour')}</span>
+          <ChevronLeft size={15} color="rgba(255,255,255,0.2)" className="flex-shrink-0" style={{ transform: isEn ? 'rotate(180deg)' : 'none' }} />
+        </button>
         <button onClick={() => router.push('/contact')}
           className="w-full flex items-center gap-3 px-4 py-3.5 transition-all">
           <MessageSquare size={18} color="rgba(151,227,37,0.7)" className="flex-shrink-0" />

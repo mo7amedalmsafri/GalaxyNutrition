@@ -11,6 +11,7 @@ import WeightMiniChart from '@/components/WeightMiniChart'
 import AICoachCard from '@/components/AICoachCard'
 import FoodEntryModal from '@/components/FoodEntryModal'
 import FoodSearchBar from '@/components/FoodSearchBar'
+import TourOverlay, { TourStep } from '@/components/TourOverlay'
 import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, useInboxUnread } from '@/lib/store'
@@ -75,6 +76,7 @@ export default function Dashboard() {
   const [editingFood, setEditingFood] = useState<FoodItem | null>(null)
   const savedMeals = useSavedMeals()
   const inboxUnread = useInboxUnread()
+  const [showTour, setShowTour] = useState(false)
   const [waterMl, setWaterMlState] = useState(0)
   const [weightHistory, setWeightHistory] = useState(WEIGHT_HISTORY_FALLBACK)
   const [showFoodModal, setShowFoodModal] = useState(false)
@@ -135,6 +137,15 @@ export default function Dashboard() {
     }, 1500)
     return () => clearTimeout(t)
   }, [profileHydrated, profile.completedOnboarding, profile.xpLocked, profile.xpPending, profile.xpDate])
+
+  // الجولة التعريفية — أول زيارة بعد إكمال الإعداد
+  useEffect(() => {
+    if (!profileHydrated || !profile.completedOnboarding) return
+    if (typeof window !== 'undefined' && !localStorage.getItem('dietak-tour-done')) {
+      const to = setTimeout(() => setShowTour(true), 700)
+      return () => clearTimeout(to)
+    }
+  }, [profileHydrated, profile.completedOnboarding])
 
   if (!profileHydrated || checkingRemoteProfile || !profile.completedOnboarding) {
     return (
@@ -329,7 +340,7 @@ export default function Dashboard() {
 
         {/* Right: level ring + menu */}
         <div className="flex items-center gap-3 flex-shrink-0 mr-2">
-          <button onClick={() => router.push('/rewards')} className="relative active:scale-95 transition-transform"
+          <button onClick={() => router.push('/rewards')} data-tour="level" className="relative active:scale-95 transition-transform"
             aria-label={t('الجوائز والمستويات', 'Rewards & levels')}>
             <LevelRing xp={currentXp} size={50} />
             <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
@@ -338,7 +349,7 @@ export default function Dashboard() {
             </span>
           </button>
           {/* Inbox bell */}
-          <button onClick={() => router.push('/inbox')}
+          <button onClick={() => router.push('/inbox')} data-tour="inbox"
             className="relative w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
             style={{ background: isLight ? '#ffffff' : 'rgba(255,255,255,0.07)' }}
             aria-label={t('صندوق الوارد', 'Inbox')}>
@@ -363,7 +374,7 @@ export default function Dashboard() {
       </div>
 
       {/* Food Search Bar */}
-      <div className="animate-slide-up">
+      <div className="animate-slide-up" data-tour="search">
         <FoodSearchBar onAddFood={handleAddFood} saved={savedMeals.saved} onRemoveSaved={savedMeals.remove} />
       </div>
 
@@ -647,6 +658,7 @@ export default function Dashboard() {
       {/* FAB */}
       <button
         onClick={() => setShowFoodModal(true)}
+        data-tour="add"
         className="fixed bottom-24 left-5 z-40 fab-button flex items-center justify-center"
         aria-label="إضافة طعام"
       >
@@ -655,6 +667,22 @@ export default function Dashboard() {
 
       {showFoodModal && (
         <FoodEntryModal onSave={handleAddFood} onClose={() => setShowFoodModal(false)} />
+      )}
+
+      {/* ── الجولة التعريفية ── */}
+      {showTour && (
+        <TourOverlay
+          lang={(lang as 'ar' | 'en')}
+          onClose={() => { setShowTour(false); try { localStorage.setItem('dietak-tour-done', '1') } catch {} }}
+          steps={[
+            { selector: '[data-tour="level"]',  title: t('المستوى والجوائز', 'Level & Rewards'), body: t('اضغط هنا لترى مستواك وتستلم الهدايا كل ما ترتقي.', 'Tap here to see your level and claim rewards as you climb.') },
+            { selector: '[data-tour="inbox"]',  title: t('صندوق الوارد', 'Inbox'),               body: t('ردود الدعم وإعلاناتنا (خصومات وأخبار) تجيك هنا.', 'Support replies and our announcements arrive here.') },
+            { selector: '[data-tour="search"]', title: t('أضف وجباتك', 'Add your meals'),        body: t('ابحث عن أي طعام أو احسب سعراته بالذكاء الاصطناعي بكتابة الوصف.', 'Search any food or calculate its calories with AI.') },
+            { selector: '[data-tour="add"]',    title: t('إضافة سريعة', 'Quick add'),            body: t('زر (+) لإضافة وجبة يدوياً أو بمسح باركود في أي وقت.', 'The + button adds a meal manually or by barcode anytime.') },
+            { selector: '[data-tour="scan"]',   title: t('صوّر وجبتك', 'Snap your meal'),        body: t('صوّر وجبتك ويحللها الذكاء الاصطناعي تلقائياً.', 'Photograph your meal and AI analyzes it automatically.') },
+            { selector: '[data-tour="nav"]',    title: t('التنقّل', 'Navigation'),               body: t('من هنا: الرئيسية، وجباتي، التصوير، الرياضة، وخطتي.', 'From here: Home, Meals, Scan, Workout, and My Plan.') },
+          ] as TourStep[]}
+        />
       )}
 
       {/* ── Edit an already-added meal ── */}
