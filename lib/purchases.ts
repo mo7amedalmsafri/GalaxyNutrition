@@ -41,11 +41,18 @@ async function rc() {
   return mod.Purchases
 }
 
-async function ensureConfigured() {
+// وعد مشترك يمنع استدعاء configure أكثر من مرة في نفس الوقت (سباق)
+let configurePromise: Promise<void> | null = null
+async function ensureConfigured(): Promise<void> {
   if (configured) return
-  const Purchases = await rc()
-  await Purchases.configure({ apiKey: RC_KEY })
-  configured = true
+  if (!configurePromise) {
+    configurePromise = (async () => {
+      const Purchases = await rc()
+      await Purchases.configure({ apiKey: RC_KEY })
+      configured = true
+    })().catch(e => { configurePromise = null; throw e })
+  }
+  return configurePromise
 }
 
 /** هل الاشتراك مفعّل حالياً على هذا الحساب؟ */
@@ -77,7 +84,7 @@ export async function purchasePro(): Promise<PurchaseResult> {
   if (!RC_KEY) return { ok: false, error: 'no-key' }
   if (!nativePluginPresent()) return { ok: false, error: 'plugin-missing (بناء قديم؟)' }
   try {
-    await withTimeout(ensureConfigured(), 8000, 'configure')
+    await withTimeout(ensureConfigured(), 15000, 'configure')
     const Purchases = await rc()
 
     const offerings = await withTimeout(Purchases.getOfferings(), 15000, 'offerings')
