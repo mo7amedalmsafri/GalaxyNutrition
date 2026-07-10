@@ -17,6 +17,7 @@ import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, useInboxUnread } from '@/lib/store'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
+import { syncWaterWidget } from '@/lib/waterWidget'
 import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover, xpMultiplier } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
 
@@ -109,7 +110,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (!profileHydrated || !profile.completedOnboarding) return
     getFoodLogs(today).then(setTodayFoods)
-    getWaterLog(today).then(setWaterMlState)
+    getWaterLog(today).then(ml => {
+      setWaterMlState(ml)
+      syncWaterWidget(ml, profile.targetWater ?? 2500)   // حدّث ويدجت الشاشة الرئيسية
+    })
     getWeightEntries().then(entries => {
       if (entries.length > 0) {
         setWeightHistory(entries.map(e => ({ date: e.date as string, weight: e.weight as number })))
@@ -230,6 +234,7 @@ export default function Dashboard() {
     const next = Math.min(waterMl + ml, 6000)
     setWaterMlState(next)
     setWaterLog(today, next)
+    syncWaterWidget(next, profile.targetWater ?? 2500)
     earn(XP_REWARDS.LOG_WATER)
   }
 
@@ -242,6 +247,7 @@ export default function Dashboard() {
   const handleClearWater = () => {
     setWaterMlState(0)
     setWaterLog(today, 0)
+    syncWaterWidget(0, profile.targetWater ?? 2500)
   }
 
   const handleLogWeight = async () => {
