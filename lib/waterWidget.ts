@@ -19,3 +19,20 @@ export async function syncWaterWidget(waterMl: number, targetMl: number): Promis
     await plugin.setWater({ waterMl: Math.round(waterMl), targetMl: Math.round(targetMl), date })
   } catch { /* silent */ }
 }
+
+/** يسحب الماء المضاف من أزرار الويدجت (أثناء إغلاق التطبيق) ويصفّره — يُعيد المقدار بالمل */
+export async function consumePendingWaterWidget(): Promise<number> {
+  try {
+    const w = window as unknown as {
+      Capacitor?: {
+        isNativePlatform?: () => boolean
+        Plugins?: Record<string, { consumePendingWater?: () => Promise<{ pendingMl?: number }> }>
+      }
+    }
+    if (!w.Capacitor?.isNativePlatform?.()) return 0
+    const plugin = w.Capacitor?.Plugins?.WaterWidget
+    if (!plugin?.consumePendingWater) return 0
+    const r = await plugin.consumePendingWater()
+    return typeof r?.pendingMl === 'number' && r.pendingMl > 0 ? r.pendingMl : 0
+  } catch { return 0 }
+}

@@ -11,7 +11,8 @@ public class WaterWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "WaterWidgetPlugin"
     public let jsName = "WaterWidget"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "setWater", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setWater", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "consumePendingWater", returnType: CAPPluginReturnPromise)
     ]
 
     private let appGroup = "group.com.dietak.app"
@@ -31,5 +32,14 @@ public class WaterWidgetPlugin: CAPPlugin, CAPBridgedPlugin {
             WidgetCenter.shared.reloadAllTimelines()
         }
         call.resolve(["ok": true])
+    }
+
+    /// يُعيد الماء المضاف من أزرار الويدجت (أثناء إغلاق التطبيق) ويصفّره —
+    /// التطبيق يضيفه لسجل اليوم في قاعدة البيانات
+    @objc func consumePendingWater(_ call: CAPPluginCall) {
+        let defaults = UserDefaults(suiteName: appGroup)
+        let pending = defaults?.integer(forKey: "pendingMl") ?? 0
+        defaults?.set(0, forKey: "pendingMl")
+        call.resolve(["pendingMl": pending])
     }
 }

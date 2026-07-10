@@ -453,7 +453,7 @@
 				DEVELOPMENT_TEAM = J62GDD95QD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DietakWidget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -479,7 +479,7 @@
 				DEVELOPMENT_TEAM = J62GDD95QD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DietakWidget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -1,8 +1,46 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // مخزن مشترك بين التطبيق والويدجت (App Group)
 private let appGroup = "group.com.dietak.app"
+
+private func utcToday() -> String {
+    let fmt = DateFormatter()
+    fmt.dateFormat = "yyyy-MM-dd"
+    fmt.timeZone = TimeZone(identifier: "UTC")
+    return fmt.string(from: Date())
+}
+
+// ── نيّة إضافة الماء — تنفّذ مباشرة من زر الويدجت بدون فتح التطبيق ──
+struct AddWaterIntent: AppIntent {
+    static var title: LocalizedStringResource = "إضافة ماء"
+    static var description = IntentDescription("يضيف كمية ماء لعدّاد اليوم")
+
+    @Parameter(title: "Amount (ml)")
+    var amount: Int
+
+    init() { self.amount = 250 }
+    init(amount: Int) { self.amount = amount }
+
+    func perform() async throws -> some IntentResult {
+        let d = UserDefaults(suiteName: appGroup)
+        let today = utcToday()
+        var water = d?.integer(forKey: "waterMl") ?? 0
+        // يوم جديد؟ صفّر العدّاد أولاً
+        if (d?.string(forKey: "waterDate") ?? "") != today {
+            water = 0
+            d?.set(today, forKey: "waterDate")
+        }
+        water = min(water + amount, 6000)
+        d?.set(water, forKey: "waterMl")
+        // يتراكم للمزامنة مع التطبيق (Supabase) عند فتحه
+        let pending = (d?.integer(forKey: "pendingMl") ?? 0) + amount
+        d?.set(pending, forKey: "pendingMl")
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
+}
 
 struct WaterEntry: TimelineEntry {
     let date: Date
@@ -10,14 +48,9 @@ struct WaterEntry: TimelineEntry {
     let targetMl: Int
 }
 
-// يقرأ ماء اليوم من المخزن المشترك — يتصفّر تلقائياً مع اليوم الجديد
-// (نستخدم يوم UTC ليطابق منطق اليوم في تطبيق الويب)
 func loadWaterEntry() -> WaterEntry {
     let defaults = UserDefaults(suiteName: appGroup)
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone(identifier: "UTC")
-    let today = formatter.string(from: Date())
+    let today = utcToday()
     let savedDay = defaults?.string(forKey: "waterDate") ?? ""
     let water = (savedDay == today) ? (defaults?.integer(forKey: "waterMl") ?? 0) : 0
     let targetRaw = defaults?.integer(forKey: "waterTargetMl") ?? 0
@@ -32,65 +65,101 @@ struct WaterProvider: TimelineProvider {
         completion(loadWaterEntry())
     }
     func getTimeline(in context: Context, completion: @escaping (Timeline<WaterEntry>) -> Void) {
-        // تحديث كل ساعة (والتطبيق يحدّث فوراً عند كل تسجيل ماء)
         let next = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)
         completion(Timeline(entries: [loadWaterEntry()], policy: .after(next)))
     }
 }
 
+private let cyan = Color(red: 0.0, green: 0.83, blue: 1.0)
+private let blue = Color(red: 0.23, green: 0.51, blue: 0.96)
+private let bg   = Color(red: 0.04, green: 0.0, blue: 0.08)
+
+struct ProgressRing: View {
+    let progress: Double
+    let percentFont: CGFloat
+    var body: some View {
+        ZStack {
+            Circle().stroke(blue.opacity(0.18), lineWidth: 8)
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    LinearGradient(colors: [blue, cyan], startPoint: .top, endPoint: .bottom),
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 0) {
+                Image(systemName: "drop.fill").foregroundColor(cyan).font(.system(size: percentFont * 0.8))
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: percentFont, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+            }
+        }
+    }
+}
+
+struct AddButton: View {
+    let amount: Int
+    var body: some View {
+        Button(intent: AddWaterIntent(amount: amount)) {
+            Text("+\(amount)")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(cyan))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct WaterWidgetView: View {
     var entry: WaterEntry
+    @Environment(\.widgetFamily) var family
 
     private var progress: Double {
         guard entry.targetMl > 0 else { return 0 }
         return min(Double(entry.waterMl) / Double(entry.targetMl), 1.0)
     }
 
-    private let cyan = Color(red: 0.0, green: 0.83, blue: 1.0)
-    private let blue = Color(red: 0.23, green: 0.51, blue: 0.96)
-
     var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .stroke(blue.opacity(0.18), lineWidth: 9)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(
-                        LinearGradient(colors: [blue, cyan], startPoint: .top, endPoint: .bottom),
-                        style: StrokeStyle(lineWidth: 9, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                VStack(spacing: 1) {
-                    Image(systemName: "drop.fill")
-                        .foregroundColor(cyan)
-                        .font(.system(size: 15))
-                    Text("\(Int(progress * 100))%")
-                        .font(.system(size: 15, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(3)
-            Text("\(entry.waterMl) / \(entry.targetMl) مل")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(.white.opacity(0.72))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+        Group {
+            if family == .systemMedium { medium } else { small }
         }
-        .padding(10)
-        .widgetBackground(Color(red: 0.04, green: 0.0, blue: 0.08))
+        .containerBackground(for: .widget) { bg }
     }
-}
 
-// خلفية متوافقة مع iOS 17+ (containerBackground) وما قبله
-extension View {
-    @ViewBuilder
-    func widgetBackground(_ color: Color) -> some View {
-        if #available(iOSApplicationExtension 17.0, *) {
-            containerBackground(for: .widget) { color }
-        } else {
-            background(color)
+    // صغير: حلقة + زر واحد سريع (+250)
+    var small: some View {
+        VStack(spacing: 6) {
+            ProgressRing(progress: progress, percentFont: 14)
+                .frame(maxHeight: .infinity)
+            Text("\(entry.waterMl) / \(entry.targetMl) مل")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.7))
+                .lineLimit(1).minimumScaleFactor(0.7)
+            AddButton(amount: 250)
         }
+        .padding(4)
+    }
+
+    // متوسط: حلقة يسار + ثلاثة أزرار يمين
+    var medium: some View {
+        HStack(spacing: 14) {
+            VStack(spacing: 4) {
+                ProgressRing(progress: progress, percentFont: 16)
+                Text("\(entry.waterMl) / \(entry.targetMl) مل")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.7))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            VStack(spacing: 6) {
+                AddButton(amount: 150)
+                AddButton(amount: 250)
+                AddButton(amount: 500)
+            }
+            .frame(width: 90)
+        }
+        .padding(6)
     }
 }
 
@@ -100,8 +169,8 @@ struct DietakWaterWidget: Widget {
             WaterWidgetView(entry: entry)
         }
         .configurationDisplayName("ماء اليوم")
-        .description("تقدّم شرب الماء اليومي من دايتك")
-        .supportedFamilies([.systemSmall])
+        .description("تابع وأضف شرب الماء من الشاشة الرئيسية")
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
 
