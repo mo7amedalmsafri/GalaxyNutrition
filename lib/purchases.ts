@@ -8,6 +8,7 @@
 
 import { Capacitor } from '@capacitor/core'
 
+// build marker v2 — يجبر إعادة تضمين متغيّر البيئة في حزمة العميل
 const RC_KEY = process.env.NEXT_PUBLIC_REVENUECAT_IOS_KEY ?? ''
 let configured = false
 
@@ -57,22 +58,35 @@ export async function checkProEntitlement(): Promise<boolean> {
 
 export interface PurchaseResult { ok: boolean; cancelled?: boolean; error?: string }
 
-/** يشتري باقة الاشتراك الأولى من العرض الحالي */
+// يمنع التعليق للأبد: يفشل الوعد بعد المهلة مع اسم الخطوة
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error('timeout:' + label)), ms)),
+  ])
+}
+
+/** يشتري باقة الاشتراك من العرض الحالي — مع مهل ورسائل تشخيص دقيقة */
 export async function purchasePro(): Promise<PurchaseResult> {
   if (!isNativeIOS()) return { ok: false, error: 'not-native' }
   if (!RC_KEY) return { ok: false, error: 'no-key' }
   try {
-    await ensureConfigured()
+    await withTimeout(ensureConfigured(), 8000, 'configure')
     const Purchases = await rc()
-    const offerings = await Purchases.getOfferings()
+
+    const offerings = await withTimeout(Purchases.getOfferings(), 15000, 'offerings')
     const pkgs = offerings.current?.availablePackages ?? []
-    // نختار باقة منتجنا الشهري تحديداً، وإلا الباقة الشهرية، وإلا الأولى
+    if (pkgs.length === 0) {
+      const allCount = offerings.all ? Object.keys(offerings.all).length : 0
+      return { ok: false, error: `no-products (offerings=${allCount})` }
+    }
+
     const pkg =
       pkgs.find(p => p.product?.identifier === 'dietak_pro_monthly') ??
       pkgs.find(p => p.packageType === 'MONTHLY') ??
       pkgs[0]
-    if (!pkg) return { ok: false, error: 'no-offering' }
-    const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg })
+
+    const { customerInfo } = await withTimeout(Purchases.purchasePackage({ aPackage: pkg }), 120000, 'purchase')
     return { ok: hasActiveEntitlement(customerInfo) }
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string; userCancelled?: boolean }

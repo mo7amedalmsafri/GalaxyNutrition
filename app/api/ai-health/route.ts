@@ -29,10 +29,13 @@ export async function GET() {
 
   const geminiKey = process.env.GEMINI_API_KEY
   const orKey = process.env.OPENROUTER_API_KEY
+  const rcKey = process.env.NEXT_PUBLIC_REVENUECAT_IOS_KEY
   const results: Record<string, unknown> = {
     hasGeminiKey: !!geminiKey,
     hasOpenRouterKey: !!orKey,
     openRouterKeyPreview: orKey ? `${orKey.slice(0, 10)}…${orKey.slice(-4)}` : null,
+    hasRevenueCatKey: !!rcKey,
+    revenueCatKeyPreview: rcKey ? `${rcKey.slice(0, 8)}…${rcKey.slice(-4)}` : null,
   }
 
   const orHeaders = orKey
