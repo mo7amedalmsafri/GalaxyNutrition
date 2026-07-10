@@ -16,7 +16,7 @@ import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp } from '@/lib/store'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
-import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover } from '@/lib/gamification'
+import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover, xpMultiplier } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
 
 // ── Water drop SVG with partial fill ──
@@ -152,7 +152,10 @@ export default function Dashboard() {
   /** Award XP for a positive action — respects the daily cap of XP_DAILY_CAP. */
   const earn = (amount: number) => {
     const currentPending = profile.xpPending ?? 0
-    const actual = capDailyXp(currentPending, amount)
+    const oldTotal0    = (profile.xpLocked ?? 0) + currentPending
+    // مضاعِف الجائزة: +٢٥٪ XP من المستوى ٤
+    const boosted      = Math.round(amount * xpMultiplier(getCurrentLevel(oldTotal0).level))
+    const actual = capDailyXp(currentPending, boosted)
     if (actual <= 0) return   // daily cap already reached
 
     const oldTotal     = (profile.xpLocked ?? 0) + currentPending
@@ -325,7 +328,11 @@ export default function Dashboard() {
 
         {/* Right: level ring + menu */}
         <div className="flex items-center gap-3 flex-shrink-0 mr-2">
-          <LevelRing xp={currentXp} size={50} />
+          <button onClick={() => router.push('/rewards')} className="relative active:scale-95 transition-transform"
+            aria-label={t('الجوائز والمستويات', 'Rewards & levels')}>
+            <LevelRing xp={currentXp} size={50} />
+            <span className="absolute -top-1 -right-1 text-xs">🎁</span>
+          </button>
           <button
             onClick={() => setShowDrawer(true)}
             className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-90"

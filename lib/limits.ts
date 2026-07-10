@@ -38,11 +38,38 @@ export function isAdmin(email?: string | null): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase())
 }
 
+// ── Reward Pro: Pro مجاني مؤقت يُمنح كجائزة مستوى ─────────────────────
+const REWARD_PRO_KEY = 'dietak-reward-pro-until'
+
+/** هل هناك Pro مجاني نشط من جائزة مستوى؟ */
+export function isRewardProActive(): boolean {
+  if (typeof window === 'undefined') return false
+  const until = localStorage.getItem(REWARD_PRO_KEY)
+  return !!until && Date.now() < new Date(until).getTime()
+}
+
+/** الوقت المتبقّي من Pro الجائزة بالمللي ثانية (0 إن لا يوجد) */
+export function rewardProMsLeft(): number {
+  if (typeof window === 'undefined') return 0
+  const until = localStorage.getItem(REWARD_PRO_KEY)
+  if (!until) return 0
+  return Math.max(0, new Date(until).getTime() - Date.now())
+}
+
+/** يمنح/يمدّد Pro مجاني بعدد ساعات (يبني على المتبقّي إن وُجد) */
+export function grantRewardProHours(hours: number): void {
+  if (typeof window === 'undefined') return
+  const base = Math.max(Date.now(), Date.now() + rewardProMsLeft())
+  const until = new Date(base + hours * 3_600_000).toISOString()
+  localStorage.setItem(REWARD_PRO_KEY, until)
+}
+
 // ── Pro tier ─────────────────────────────────────────────────────────
-/** Returns true if user is admin OR has activated Pro locally */
+/** Returns true if user is admin OR has activated Pro locally OR has active reward Pro */
 export function isProUser(email?: string | null): boolean {
   if (isAdmin(email)) return true
   if (typeof window === 'undefined') return false
+  if (isRewardProActive()) return true
   return localStorage.getItem(PRO_KEY) === 'true'
 }
 

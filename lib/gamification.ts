@@ -12,57 +12,49 @@ export interface LevelInfo {
   rewardEn: string
 }
 
-export const LEVELS: LevelInfo[] = [
-  {
-    level: 1, minXp: 0,    maxXp: 150,
-    name: 'مبتدئ',        nameEn: 'Beginner',
-    color: '#94a3b8',      icon: '🌱',
-    rewardAr: 'أهلاً بك في رحلة الصحة!',
-    rewardEn: 'Welcome to your health journey!',
-  },
-  {
-    level: 2, minXp: 150,  maxXp: 400,
-    name: 'مستكشف',       nameEn: 'Explorer',
-    color: '#06b6d4',      icon: '🔍',
-    rewardAr: 'شارة المستكشف مفتوحة',
-    rewardEn: 'Explorer badge unlocked',
-  },
-  {
-    level: 3, minXp: 400,  maxXp: 800,
-    name: 'ملتزم',        nameEn: 'Committed',
-    color: '#10b981',      icon: '💪',
-    rewardAr: 'إطار أفاتار أخضر حصري',
-    rewardEn: 'Exclusive green avatar frame',
-  },
-  {
-    level: 4, minXp: 800,  maxXp: 1400,
-    name: 'بطل',          nameEn: 'Champion',
-    color: '#f59e0b',      icon: '🏆',
-    rewardAr: 'إطار ذهبي + شارة البطل',
-    rewardEn: 'Gold frame + Champion badge',
-  },
-  {
-    level: 5, minXp: 1400, maxXp: 2200,
-    name: 'محترف',        nameEn: 'Pro',
-    color: '#8b5cf6',      icon: '⭐',
-    rewardAr: 'لقب المحترف + ثيم بنفسجي',
-    rewardEn: 'Pro title + Purple theme',
-  },
-  {
-    level: 6, minXp: 2200, maxXp: 3500,
-    name: 'أسطورة',       nameEn: 'Legend',
-    color: '#ef4444',      icon: '🔥',
-    rewardAr: 'شارة الأسطورة الحمراء',
-    rewardEn: 'Red Legend badge',
-  },
-  {
-    level: 7, minXp: 3500, maxXp: 99999,
-    name: 'نجم المجرة',   nameEn: 'Galaxy Star',
-    color: '#f59e0b',      icon: '🌟',
-    rewardAr: 'أعلى لقب في المجرة — نجم أسطوري! ✨',
-    rewardEn: "Galaxy's highest rank — Legendary Star! ✨",
-  },
+// عتبات XP لكل مستوى (٢٠ مستوى، الفجوة تكبر تدريجياً)
+const LEVEL_XP = [0, 150, 400, 800, 1400, 2200, 3200, 4400, 5800, 7400,
+                  9200, 11200, 13400, 15800, 18400, 21200, 24200, 27400, 30800, 34400]
+
+const LEVEL_META: { name: string; nameEn: string; color: string; icon: string }[] = [
+  { name: 'مبتدئ',      nameEn: 'Beginner',    color: '#94a3b8', icon: '🌱' },
+  { name: 'مستكشف',     nameEn: 'Explorer',    color: '#22d3ee', icon: '🔍' },
+  { name: 'ملتزم',      nameEn: 'Committed',   color: '#10b981', icon: '💪' },
+  { name: 'نشيط',       nameEn: 'Active',      color: '#84cc16', icon: '⚡' },
+  { name: 'محترف',      nameEn: 'Pro',         color: '#8b5cf6', icon: '⭐' },
+  { name: 'متقدّم',     nameEn: 'Advanced',    color: '#06b6d4', icon: '🎯' },
+  { name: 'خبير',       nameEn: 'Expert',      color: '#3b82f6', icon: '🧠' },
+  { name: 'بطل',        nameEn: 'Champion',    color: '#f59e0b', icon: '🏆' },
+  { name: 'متمكّن',     nameEn: 'Master',      color: '#eab308', icon: '🥇' },
+  { name: 'أسطورة',     nameEn: 'Legend',      color: '#ef4444', icon: '🔥' },
+  { name: 'صقر',        nameEn: 'Falcon',      color: '#f97316', icon: '🦅' },
+  { name: 'قائد',       nameEn: 'Leader',      color: '#14b8a6', icon: '🚩' },
+  { name: 'محارب',      nameEn: 'Warrior',     color: '#dc2626', icon: '⚔️' },
+  { name: 'نخبة',       nameEn: 'Elite',       color: '#a855f7', icon: '💎' },
+  { name: 'جبّار',      nameEn: 'Titan',       color: '#6366f1', icon: '🗿' },
+  { name: 'عملاق',      nameEn: 'Giant',       color: '#f43f5e', icon: '🌋' },
+  { name: 'خارق',       nameEn: 'Superhuman',  color: '#0ea5e9', icon: '🦾' },
+  { name: 'أسطوري',     nameEn: 'Mythic',      color: '#8b5cf6', icon: '🌌' },
+  { name: 'نجم',        nameEn: 'Star',        color: '#fbbf24', icon: '🌟' },
+  { name: 'نجم المجرة', nameEn: 'Galaxy Star', color: '#f59e0b', icon: '👑' },
 ]
+
+export const LEVELS: LevelInfo[] = LEVEL_META.map((m, i) => ({
+  level: i + 1,
+  minXp: LEVEL_XP[i],
+  maxXp: i < LEVEL_XP.length - 1 ? LEVEL_XP[i + 1] : 999999,
+  name: m.name,
+  nameEn: m.nameEn,
+  color: m.color,
+  icon: m.icon,
+  rewardAr: '',
+  rewardEn: '',
+}))
+
+/** مضاعِف XP: يفتح +٢٥٪ عند المستوى ٤ */
+export function xpMultiplier(level: number): number {
+  return level >= 4 ? 1.25 : 1
+}
 
 // ── XP earned per action ─────────────────────────────────────────────────
 export const XP_REWARDS = {
