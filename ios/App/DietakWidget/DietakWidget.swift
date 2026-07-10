@@ -99,14 +99,19 @@ struct ProgressRing: View {
 
 struct AddButton: View {
     let amount: Int
+    private var label: String {
+        amount >= 1000 ? "+\(String(format: "%.1f", Double(amount) / 1000))L" : "+\(amount)"
+    }
     var body: some View {
         Button(intent: AddWaterIntent(amount: amount)) {
-            Text("+\(amount)")
+            Text(label)
                 .font(.system(size: 12, weight: .heavy, design: .rounded))
                 .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
                 .background(Capsule().fill(cyan))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .buttonStyle(.plain)
     }
@@ -142,7 +147,7 @@ struct WaterWidgetView: View {
         .padding(4)
     }
 
-    // متوسط: حلقة يسار + ثلاثة أزرار يمين
+    // متوسط: حلقة يسار + شبكة أزرار ٢×٢ يمين (250 الأساسي أولاً)
     var medium: some View {
         HStack(spacing: 14) {
             VStack(spacing: 4) {
@@ -153,11 +158,16 @@ struct WaterWidgetView: View {
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
             VStack(spacing: 6) {
-                AddButton(amount: 150)
-                AddButton(amount: 250)
-                AddButton(amount: 500)
+                HStack(spacing: 6) {
+                    AddButton(amount: 250)
+                    AddButton(amount: 330)
+                }
+                HStack(spacing: 6) {
+                    AddButton(amount: 500)
+                    AddButton(amount: 1500)
+                }
             }
-            .frame(width: 90)
+            .frame(width: 130)
         }
         .padding(6)
     }
