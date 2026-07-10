@@ -115,8 +115,23 @@ export async function purchasePro(): Promise<PurchaseResult> {
     if (err?.userCancelled || err?.code === 'PURCHASE_CANCELLED' || /cancel/i.test(err?.message ?? '')) {
       return { ok: false, cancelled: true }
     }
-    return { ok: false, error: `${err?.message ?? 'purchase-failed'} | ${bridgeDiag()}` }
+    const probe = await probeBridge()
+    return { ok: false, error: `${err?.message ?? 'purchase-failed'} | ${bridgeDiag()} | ${probe}` }
   }
+}
+
+// اختبار حاسم: ننادي إضافة نظام أخرى (Cookies) — لو ردّت فالجسر سليم
+// والعطل خاص بإضافة الدفع؛ لو علّقت فالجسر كله معطّل مع الرابط البعيد
+async function probeBridge(): Promise<string> {
+  try {
+    const w = window as unknown as { Capacitor?: { Plugins?: Record<string, { getCookies?: () => Promise<unknown> }> } }
+    const cookies = w.Capacitor?.Plugins?.CapacitorCookies
+    if (!cookies?.getCookies) return 'probe:no-cookies-plugin'
+    return await Promise.race([
+      cookies.getCookies().then(() => 'probe:bridge-OK'),
+      new Promise<string>(res => setTimeout(() => res('probe:bridge-HANG'), 3000)),
+    ])
+  } catch (e) { return 'probe:err:' + (e as Error).message }
 }
 
 // تشخيص حالة جسر Capacitor — يُلحق برسالة الخطأ لتحديد مكان العطل
