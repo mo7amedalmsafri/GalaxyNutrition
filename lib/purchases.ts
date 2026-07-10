@@ -116,8 +116,31 @@ export async function purchasePro(): Promise<PurchaseResult> {
       return { ok: false, cancelled: true }
     }
     const probe = await probeBridge()
-    return { ok: false, error: `${err?.message ?? 'purchase-failed'} | ${bridgeDiag()} | ${probe}` }
+    const pprobe = await probePurchasesNative()
+    return { ok: false, error: `${err?.message ?? 'purchase-failed'} | ${bridgeDiag()} | ${probe} | ${pprobe}` }
   }
+}
+
+// فحص عميق لإضافة الدفع تحديداً:
+//  hdr = هل الكود الأصلي أعلن دوالها للجسر؟ | isCfg = نداء مباشر عبر الجسر
+async function probePurchasesNative(): Promise<string> {
+  try {
+    const w = window as unknown as {
+      Capacitor?: {
+        PluginHeaders?: Array<{ name: string; methods?: Array<{ name: string }> }>
+        Plugins?: Record<string, { isConfigured?: () => Promise<unknown> }>
+      }
+    }
+    const h = w.Capacitor?.PluginHeaders?.find(x => x.name === 'Purchases')
+    const headerInfo = h ? `hdr:${h.methods?.length ?? 0}m` : 'hdr:MISSING'
+    const direct = w.Capacitor?.Plugins?.Purchases
+    if (!direct?.isConfigured) return `${headerInfo} direct:no-fn`
+    const r = await Promise.race([
+      direct.isConfigured().then(v => 'isCfg:' + JSON.stringify(v)).catch(e => 'isCfg-err:' + (e as Error).message),
+      new Promise<string>(res => setTimeout(() => res('isCfg:HANG'), 3000)),
+    ])
+    return `${headerInfo} ${r}`
+  } catch (e) { return 'pprobe-err:' + (e as Error).message }
 }
 
 // اختبار حاسم: ننادي إضافة نظام أخرى (Cookies) — لو ردّت فالجسر سليم
