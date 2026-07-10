@@ -18,10 +18,10 @@ export interface Reward {
 // الجوائز عند مستويات محددة (الباقي بلا جائزة)
 export const REWARDS: Reward[] = [
   { level: 4,  type: 'xp_boost', icon: '🚀', ar: 'زيادة نقاط دائمة +٢٥٪',      en: '+25% XP forever' },
-  { level: 5,  type: 'free_pro',  hours: 1,  icon: '🎁', ar: 'ساعة Pro مجانية',        en: '1 hour free Pro' },
+  { level: 5,  type: 'free_pro',  hours: 24, icon: '🎁', ar: 'يوم Pro مجاني',          en: '1 day free Pro' },
   { level: 10, type: 'free_pro',  hours: 24, icon: '🎁', ar: 'يوم Pro مجاني',          en: '1 day free Pro' },
-  { level: 15, type: 'free_pro',  hours: 48, icon: '🎁', ar: 'يومان Pro مجاني',        en: '2 days free Pro' },
-  { level: 18, type: 'free_pro',  hours: 72, icon: '🎁', ar: '٣ أيام Pro مجاني',       en: '3 days free Pro' },
+  { level: 15, type: 'free_pro',  hours: 24, icon: '🎁', ar: 'يوم Pro مجاني',          en: '1 day free Pro' },
+  { level: 18, type: 'free_pro',  hours: 24, icon: '🎁', ar: 'يوم Pro مجاني',          en: '1 day free Pro' },
   { level: 20, type: 'discount', percent: 50, icon: '💰', ar: 'خصم ٥٠٪ على الاشتراك', en: '50% off subscription' },
 ]
 
