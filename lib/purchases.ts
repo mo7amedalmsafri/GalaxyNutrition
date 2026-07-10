@@ -48,8 +48,17 @@ async function ensureConfigured(): Promise<void> {
   if (!configurePromise) {
     configurePromise = (async () => {
       const Purchases = await rc()
-      await Purchases.configure({ apiKey: RC_KEY })
-      configured = true
+      // أحياناً وعد configure لا يرجع رغم نجاح التهيئة فعلياً (خلل جسر معروف)
+      // فنطلقه بلا انتظار، ثم نستعلم isConfigured دورياً كبديل موثوق
+      Purchases.configure({ apiKey: RC_KEY }).then(() => { configured = true }).catch(() => {})
+      for (let i = 0; i < 24 && !configured; i++) {
+        try {
+          const r = await Purchases.isConfigured()
+          if (r?.isConfigured) { configured = true; break }
+        } catch { /* ignore */ }
+        await new Promise(res => setTimeout(res, 500))
+      }
+      if (!configured) throw new Error('configure-failed')
     })().catch(e => { configurePromise = null; throw e })
   }
   return configurePromise
