@@ -9,7 +9,8 @@ import { getTodayDate } from '@/lib/utils'
 import { useT, useLang, useLocalStorage, StoredProfile, DEFAULT_PROFILE } from '@/lib/store'
 import { XP_REWARDS, capDailyXp } from '@/lib/gamification'
 import { createClient } from '@/lib/supabase/client'
-import { hasPremiumAccess, trialDaysLeft, isProUser } from '@/lib/limits'
+import { hasPremiumAccess, trialDaysLeft, isProUser, canAddMeal, recordMealAdd } from '@/lib/limits'
+import MealLimitModal from '@/components/MealLimitModal'
 
 type ScanState = 'idle' | 'preview' | 'analyzing' | 'results' | 'error'
 
@@ -21,6 +22,7 @@ export default function ScanPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [createdAt, setCreatedAt] = useState<string | null>(null)
   const [showLimitModal, setShowLimitModal] = useState(false)
+  const [mealGateOpen, setMealGateOpen] = useState(false)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -185,9 +187,9 @@ export default function ScanPage() {
   const analyzeImage = async () => {
     if (!imageBase64) return
 
-    // ── Trial/subscription check ──
-    if (!hasPremiumAccess(userEmail, createdAt)) {
-      setShowLimitModal(true)
+    // ── حد الوجبات المجانية (وجبتان/يوم للمجانيين، ثم إعلان) ──
+    if (!canAddMeal(userEmail)) {
+      setMealGateOpen(true)
       return
     }
 
@@ -242,6 +244,7 @@ export default function ScanPage() {
         potassium:      detectedFoods.reduce((s, f) => s + (f.nutrition.potassium ?? 0), 0),
       },
     })
+    recordMealAdd()   // عدّاد الوجبات التصاعدي
     // Earn XP for scanning & adding a meal — respects the daily cap
     setProfile(p => {
       const toAdd = capDailyXp(p.xpPending ?? 0, XP_REWARDS.SCAN_FOOD)
@@ -709,7 +712,14 @@ export default function ScanPage() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={e => e.target.files?.[0] && processImage(e.target.files[0])} />
 
-      {/* ── Limit Modal ── */}
+      {/* بوابة حد الوجبات — إعلان لفتح وجبة إضافية ثم متابعة التحليل */}
+      <MealLimitModal
+        open={mealGateOpen}
+        onClose={() => setMealGateOpen(false)}
+        onGranted={() => { setMealGateOpen(false); analyzeImage() }}
+      />
+
+      {/* ── Limit Modal (احتياطي) ── */}
       {showLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-5"
           style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>

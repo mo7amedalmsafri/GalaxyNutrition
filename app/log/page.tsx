@@ -8,7 +8,9 @@ import { FoodItem } from '@/lib/types'
 import { getTodayDate } from '@/lib/utils'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useUserEmail } from '@/lib/store'
+import { canAddMeal, recordMealAdd } from '@/lib/limits'
+import MealLimitModal from '@/components/MealLimitModal'
 
 const MEAL_ORDER: FoodItem['mealType'][] = ['breakfast', 'lunch', 'dinner', 'snack']
 const MEAL_ICONS: Record<string, string> = {
@@ -34,7 +36,9 @@ export default function LogPage() {
   const [loading,   setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editItem,  setEditItem]  = useState<FoodItem | null>(null)  // الوجبة المراد تعديلها
+  const [mealGate,  setMealGate]  = useState<Omit<FoodItem, 'id' | 'loggedAt'> | null>(null)
   const savedMeals = useSavedMeals()
+  const email = useUserEmail()
 
   useEffect(() => {
     getFoodLogs(today).then(data => { setFoods(data); setLoading(false) })
@@ -50,11 +54,21 @@ export default function LogPage() {
 
   // ── إضافة وجبة جديدة ──
   const handleAdd = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
+    if (!canAddMeal(email)) {   // تجاوز الحد المجاني → بوابة الإعلان
+      setShowModal(false)
+      setMealGate(item)
+      return
+    }
+    await doAdd(item)
+    setShowModal(false)
+  }
+
+  const doAdd = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
     const tempItem: FoodItem = { ...item, id: `tmp-${Date.now()}`, loggedAt: new Date().toISOString() }
     setFoods(prev => [...prev, tempItem])
+    recordMealAdd()
     const saved = await addFoodLog(today, item)
     if (saved) setFoods(prev => prev.map(f => f.id === tempItem.id ? saved : f))
-    setShowModal(false)
   }
 
   // ── حفظ تعديل وجبة موجودة ──
@@ -210,6 +224,13 @@ export default function LogPage() {
           onClose={() => setShowModal(false)}
         />
       )}
+
+      {/* بوابة حد الوجبات — إعلان لفتح وجبة إضافية */}
+      <MealLimitModal
+        open={mealGate !== null}
+        onClose={() => setMealGate(null)}
+        onGranted={() => { const p = mealGate; setMealGate(null); if (p) doAdd(p) }}
+      />
 
       {/* Modal تعديل */}
       {editItem && (

@@ -6,7 +6,6 @@ import GlassCard from '@/components/GlassCard'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { savePlan, getPlans, deletePlan, WorkoutPlan } from '@/lib/db'
 import { createClient } from '@/lib/supabase/client'
-import { hasPremiumAccess } from '@/lib/limits'
 
 const GOAL_LABELS: Record<string, { ar: string; en: string; color: string }> = {
   lose:     { ar: 'إنقاص الوزن',      en: 'Weight Loss',     color: '#06b6d4' },
@@ -83,11 +82,7 @@ export default function PlansPage() {
 
   // ── Generate ──────────────────────────────────────────────────────────────
   const generate = async () => {
-    // ── Trial/subscription check ──
-    if (!hasPremiumAccess(userEmail, createdAt)) {
-      setShowPlanLimitMsg(true)
-      return
-    }
+    // خطة التغذية مجانية للجميع — بلا قفل اشتراك
     setShowPlanLimitMsg(false)
     setPlanText(''); setError(''); setMacros(null); setMacrosError('')
     setStreaming(true)
