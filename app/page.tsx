@@ -699,6 +699,15 @@ export default function Dashboard() {
         proteinProgress={(protein / profile.targetProtein) * 100}
       />
 
+      {/* يوم سابق بلا وجبات — توضيح أنه فارغ فعلاً (وليس معطّلاً) */}
+      {!isToday && todayFoods.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-8 text-center rounded-2xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <Info size={26} color="rgba(255,255,255,0.2)" />
+          <p className="text-sm text-white/40">{t('لا توجد وجبات مسجّلة في هذا اليوم', 'No meals logged on this day')}</p>
+        </div>
+      )}
+
       {/* ── Today's foods ── */}
       {todayFoods.length > 0 && (
         <GlassCard glow="none" className="p-5" animate={false}>
