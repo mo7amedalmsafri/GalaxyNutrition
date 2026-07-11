@@ -18,6 +18,7 @@ import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, 
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
 import { syncWaterWidget, consumePendingWaterWidget } from '@/lib/waterWidget'
+import { isHealthPlatform, requestHealthAccess, getTodayBurnedFromHealth } from '@/lib/health'
 import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover, xpMultiplier } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
 
@@ -124,6 +125,25 @@ export default function Dashboard() {
       }
     })
   }, [profileHydrated, profile.completedOnboarding, today])
+
+  // Apple Health: اطلب الإذن تلقائياً أول فتح، وإن قُبل احفظ الربط لصفحة التمارين
+  useEffect(() => {
+    if (!profileHydrated || !profile.completedOnboarding) return
+    if (!isHealthPlatform()) return
+    let done = false
+    try { done = localStorage.getItem('galaxy-health-asked') === 'true' } catch {}
+    if (done) return
+    ;(async () => {
+      try { localStorage.setItem('galaxy-health-asked', 'true') } catch {}
+      const granted = await requestHealthAccess()
+      if (!granted) return
+      const kcal = await getTodayBurnedFromHealth()
+      try {
+        localStorage.setItem('galaxy-health-connected', JSON.stringify(true))
+        localStorage.setItem('galaxy-health-burned', JSON.stringify(kcal))
+      } catch {}
+    })()
+  }, [profileHydrated, profile.completedOnboarding])
 
   // XP day rollover: when a new day starts, lock yesterday's pending XP permanently
   useEffect(() => {
