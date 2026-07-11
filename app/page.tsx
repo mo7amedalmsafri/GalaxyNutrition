@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil, Gift } from 'lucide-react'
+import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil, Gift, ChevronLeft, ChevronRight } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import BMICircle from '@/components/BMICircle'
 import CalorieRing from '@/components/CalorieRing'
@@ -69,6 +69,15 @@ export default function Dashboard() {
   const isNativeApp = useIsNativeApp()
   const today = getTodayDate()
 
+  // التاريخ المعروض (للتصفّح للأيام السابقة — عرض فقط). الإضافات دائماً لليوم الحقيقي.
+  const [viewDate, setViewDate] = useState(today)
+  const isToday = viewDate === today
+  const shiftDate = (base: string, days: number) => {
+    const d = new Date(base + 'T00:00:00Z')
+    d.setUTCDate(d.getUTCDate() + days)
+    return d.toISOString().split('T')[0]
+  }
+
   const [profile, setProfile, profileHydrated] = useLocalStorage<StoredProfile>('galaxy-profile', DEFAULT_PROFILE)
   const lang    = profile.language ?? 'ar'
   const isLight = (profile.theme ?? 'dark') === 'light'
@@ -110,22 +119,27 @@ export default function Dashboard() {
   // Load today's data from Supabase
   useEffect(() => {
     if (!profileHydrated || !profile.completedOnboarding) return
-    getFoodLogs(today).then(setTodayFoods)
-    getWaterLog(today).then(async ml => {
-      // إن كان الويدجت فيه تعديل غير مُزامن (إضافة/تراجع/مسح أثناء الإغلاق)
-      // نعتمد قيمته كقيمة اليوم، وإلا نعتمد سجل Supabase
-      const st = await getWaterWidgetState()
-      const total = st.dirty ? st.waterMl : ml
-      if (st.dirty && total !== ml) setWaterLog(today, total)
-      setWaterMlState(total)
-      syncWaterWidget(total, profile.targetWater ?? 2500)   // يكتب القيمة المرجعية ويصفّر إشارة التعديل
-    })
+    getFoodLogs(viewDate).then(setTodayFoods)
+    if (isToday) {
+      getWaterLog(viewDate).then(async ml => {
+        // إن كان الويدجت فيه تعديل غير مُزامن (إضافة/تراجع/مسح أثناء الإغلاق)
+        // نعتمد قيمته كقيمة اليوم، وإلا نعتمد سجل Supabase
+        const st = await getWaterWidgetState()
+        const total = st.dirty ? st.waterMl : ml
+        if (st.dirty && total !== ml) setWaterLog(viewDate, total)
+        setWaterMlState(total)
+        syncWaterWidget(total, profile.targetWater ?? 2500)   // يكتب القيمة المرجعية ويصفّر إشارة التعديل
+      })
+    } else {
+      // يوم سابق — عرض فقط، بدون مزامنة الويدجت
+      getWaterLog(viewDate).then(setWaterMlState)
+    }
     getWeightEntries().then(entries => {
       if (entries.length > 0) {
         setWeightHistory(entries.map(e => ({ date: e.date as string, weight: e.weight as number })))
       }
     })
-  }, [profileHydrated, profile.completedOnboarding, today])
+  }, [profileHydrated, profile.completedOnboarding, viewDate, isToday])
 
   // Apple Health: اطلب الإذن تلقائياً أول فتح، وإن قُبل احفظ الربط لصفحة التمارين
   useEffect(() => {
@@ -232,6 +246,7 @@ export default function Dashboard() {
   const fat = todayFoods.reduce((s, f) => s + f.nutrition.fat, 0)
 
   const handleAddFood = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
+    if (!isToday) return
     const tempItem: FoodItem = { ...item, id: `tmp-${Date.now()}`, loggedAt: new Date().toISOString() }
     setTodayFoods(prev => [...prev, tempItem])
     const saved = await addFoodLog(today, item)
@@ -240,6 +255,7 @@ export default function Dashboard() {
   }
 
   const handleDeleteFood = async (id: string) => {
+    if (!isToday) return
     setTodayFoods(prev => prev.filter(f => f.id !== id))
     await deleteFoodLog(id)
     loseXp(XP_REWARDS.LOG_FOOD)   // خصم XP — فقط من نقاط اليوم
@@ -247,6 +263,7 @@ export default function Dashboard() {
 
   // تعديل وجبة مضافة — يحدّث القيم بعد إعادة الحساب (بلا XP جديد)
   const handleEditFood = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
+    if (!isToday) return
     const id = editingFood?.id
     if (!id) return
     setTodayFoods(prev => prev.map(f => f.id === id ? { ...f, ...item } : f))
@@ -256,6 +273,7 @@ export default function Dashboard() {
   }
 
   const addWater = (ml: number) => {
+    if (!isToday) return
     const next = Math.min(waterMl + ml, 6000)
     setWaterMlState(next)
     setWaterLog(today, next)
@@ -270,12 +288,14 @@ export default function Dashboard() {
   }
 
   const handleClearWater = () => {
+    if (!isToday) return
     setWaterMlState(0)
     setWaterLog(today, 0)
     syncWaterWidget(0, profile.targetWater ?? 2500)
   }
 
   const handleLogWeight = async () => {
+    if (!isToday) return
     const w = parseFloat(weightInput)
     if (isNaN(w) || w < 20 || w > 400) return
     setSavingWeight(true)
@@ -330,11 +350,39 @@ export default function Dashboard() {
       <div className="flex items-center justify-between animate-fade-in">
         {/* Left: greeting + level badge */}
         <div className="flex-1 min-w-0">
-          <p className="text-white/50 text-sm">
-            {new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ar-SA', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
-          </p>
+          {/* Date navigator — تصفّح الأيام السابقة (عرض فقط) */}
+          <div className="flex items-center gap-1.5" dir="ltr">
+            <button
+              onClick={() => setViewDate(d => shiftDate(d, -1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+              style={{ background: 'rgba(151,227,37,0.14)', color: '#97E325' }}
+              aria-label="السابق"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <p className="text-white/55 text-sm font-semibold min-w-[130px] text-center"
+              style={{ direction: lang === 'en' ? 'ltr' : 'rtl' }}>
+              {isToday
+                ? t('اليوم', 'Today')
+                : new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ar-SA', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(viewDate + 'T00:00:00Z'))}
+            </p>
+            <button
+              onClick={() => { if (!isToday) setViewDate(d => shiftDate(d, 1)) }}
+              disabled={isToday}
+              className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+              style={{
+                background: isToday ? 'rgba(255,255,255,0.05)' : 'rgba(151,227,37,0.14)',
+                color:      isToday ? 'rgba(255,255,255,0.2)'  : '#97E325',
+              }}
+              aria-label="التالي"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
           <h1 className="text-xl font-black text-white mt-0.5">
-            {t('مرحباً،', 'Hello,')} <span className="text-gradient-galaxy">{profile.name}</span> 👋
+            {isToday
+              ? <>{t('مرحباً،', 'Hello,')} <span className="text-gradient-galaxy">{profile.name}</span> 👋</>
+              : <span className="text-gradient-galaxy">{new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ar-SA', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(viewDate + 'T00:00:00Z'))}</span>}
           </h1>
           {/* Level badge row */}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -404,10 +452,17 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Food Search Bar */}
-      <div className="animate-slide-up" data-tour="search">
-        <FoodSearchBar onAddFood={handleAddFood} saved={savedMeals.saved} onRemoveSaved={savedMeals.remove} />
-      </div>
+      {/* Food Search Bar — اليوم الحالي فقط */}
+      {isToday ? (
+        <div className="animate-slide-up" data-tour="search">
+          <FoodSearchBar onAddFood={handleAddFood} saved={savedMeals.saved} onRemoveSaved={savedMeals.remove} />
+        </div>
+      ) : (
+        <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold"
+          style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <Info size={13} /> {t('عرض فقط — يوم سابق', 'View only — past day')}
+        </div>
+      )}
 
       {/* ── Calorie Summary ── */}
       <GlassCard glow="purple" className="p-5" animate={false}>
@@ -496,16 +551,18 @@ export default function Dashboard() {
       <GlassCard glow="gold" className="p-5" animate={false}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-white text-base">{t('رحلة الوزن', 'Weight Journey')}</h2>
-          <button
-            onClick={() => { setShowWeightInput(v => !v); setWeightInput('') }}
-            className="text-xs px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
-            style={{
-              background: showWeightInput ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.12)',
-              color: '#f59e0b',
-              border: '1px solid rgba(245,158,11,0.35)',
-            }}>
-            {showWeightInput ? t('إلغاء', 'Cancel') : `+ ${t('تسجيل', 'Log')}`}
-          </button>
+          {isToday && (
+            <button
+              onClick={() => { setShowWeightInput(v => !v); setWeightInput('') }}
+              className="text-xs px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+              style={{
+                background: showWeightInput ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.12)',
+                color: '#f59e0b',
+                border: '1px solid rgba(245,158,11,0.35)',
+              }}>
+              {showWeightInput ? t('إلغاء', 'Cancel') : `+ ${t('تسجيل', 'Log')}`}
+            </button>
+          )}
         </div>
 
         {/* Inline weight logging */}
@@ -564,51 +621,54 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Quick add */}
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          {[150, 250, 330, 500].map(ml => (
-            <button
-              key={ml}
-              onClick={() => addWater(ml)}
-              className="py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
-              style={{ background: 'rgba(6,182,212,0.12)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.25)' }}
-            >
-              +{ml}
-            </button>
-          ))}
-        </div>
+        {/* Quick add + custom input — اليوم الحالي فقط */}
+        {isToday && (
+          <>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {[150, 250, 330, 500].map(ml => (
+                <button
+                  key={ml}
+                  onClick={() => addWater(ml)}
+                  className="py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+                  style={{ background: 'rgba(6,182,212,0.12)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.25)' }}
+                >
+                  +{ml}
+                </button>
+              ))}
+            </div>
 
-        {/* Custom ML input */}
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <input
-              type="number"
-              value={waterInput}
-              onChange={e => setWaterInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleWaterInput()}
-              placeholder={t('كمية مخصصة...', 'Custom amount...')}
-              className="galaxy-input w-full px-3 py-2.5 text-sm"
-              dir="ltr"
-            />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs">{t('مل', 'ml')}</span>
-          </div>
-          <button
-            onClick={handleWaterInput}
-            className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
-            style={{ background: 'rgba(6,182,212,0.2)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.3)' }}
-          >
-            {t('أضف', 'Add')}
-          </button>
-          {waterMl > 0 && (
-            <button
-              onClick={handleClearWater}
-              className="px-3 py-2.5 rounded-xl text-xs text-white/30 transition-all"
-              style={{ background: 'rgba(255,255,255,0.05)' }}
-            >
-              {t('مسح', 'Clear')}
-            </button>
-          )}
-        </div>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="number"
+                  value={waterInput}
+                  onChange={e => setWaterInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleWaterInput()}
+                  placeholder={t('كمية مخصصة...', 'Custom amount...')}
+                  className="galaxy-input w-full px-3 py-2.5 text-sm"
+                  dir="ltr"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs">{t('مل', 'ml')}</span>
+              </div>
+              <button
+                onClick={handleWaterInput}
+                className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+                style={{ background: 'rgba(6,182,212,0.2)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.3)' }}
+              >
+                {t('أضف', 'Add')}
+              </button>
+              {waterMl > 0 && (
+                <button
+                  onClick={handleClearWater}
+                  className="px-3 py-2.5 rounded-xl text-xs text-white/30 transition-all"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                >
+                  {t('مسح', 'Clear')}
+                </button>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Progress bar */}
         <div className="h-2 rounded-full overflow-hidden mt-3" style={{ background: 'rgba(255,255,255,0.08)' }}>
@@ -666,35 +726,41 @@ export default function Dashboard() {
                   <Star size={14} color={savedMeals.isSaved(food) ? '#f59e0b' : 'rgba(255,255,255,0.4)'}
                         fill={savedMeals.isSaved(food) ? '#f59e0b' : 'none'} />
                 </button>
-                <button
-                  onClick={() => setEditingFood(food)}
-                  aria-label={t('تعديل', 'Edit')}
-                  className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
-                  style={{ background: 'rgba(0,212,255,0.08)' }}>
-                  <Pencil size={14} color="rgba(0,212,255,0.6)" />
-                </button>
-                <button
-                  onClick={() => handleDeleteFood(food.id)}
-                  aria-label={t('حذف', 'Delete')}
-                  className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
-                  style={{ background: 'rgba(239,68,68,0.08)' }}>
-                  <Trash2 size={14} color="rgba(239,68,68,0.55)" />
-                </button>
+                {isToday && (
+                  <>
+                    <button
+                      onClick={() => setEditingFood(food)}
+                      aria-label={t('تعديل', 'Edit')}
+                      className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
+                      style={{ background: 'rgba(0,212,255,0.08)' }}>
+                      <Pencil size={14} color="rgba(0,212,255,0.6)" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFood(food.id)}
+                      aria-label={t('حذف', 'Delete')}
+                      className="p-1.5 rounded-lg flex-shrink-0 active:scale-90 transition-transform"
+                      style={{ background: 'rgba(239,68,68,0.08)' }}>
+                      <Trash2 size={14} color="rgba(239,68,68,0.55)" />
+                    </button>
+                  </>
+                )}
               </div>
             ))}
           </div>
         </GlassCard>
       )}
 
-      {/* FAB */}
-      <button
-        onClick={() => setShowFoodModal(true)}
-        data-tour="add"
-        className="fixed bottom-24 left-5 z-40 fab-button flex items-center justify-center"
-        aria-label="إضافة طعام"
-      >
-        <Plus size={28} color="white" strokeWidth={2.5} />
-      </button>
+      {/* FAB — اليوم الحالي فقط */}
+      {isToday && (
+        <button
+          onClick={() => setShowFoodModal(true)}
+          data-tour="add"
+          className="fixed bottom-24 left-5 z-40 fab-button flex items-center justify-center"
+          aria-label="إضافة طعام"
+        >
+          <Plus size={28} color="white" strokeWidth={2.5} />
+        </button>
+      )}
 
       {showFoodModal && (
         <FoodEntryModal onSave={handleAddFood} onClose={() => setShowFoodModal(false)} />
