@@ -17,7 +17,7 @@ import { FoodItem } from '@/lib/types'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, useInboxUnread } from '@/lib/store'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
-import { syncWaterWidget, consumePendingWaterWidget } from '@/lib/waterWidget'
+import { syncWaterWidget, getWaterWidgetState } from '@/lib/waterWidget'
 import { isHealthPlatform, requestHealthAccess, getTodayBurnedFromHealth } from '@/lib/health'
 import { getCurrentLevel, getLevelProgress, getXpToNextLevel, XP_REWARDS, XP_DAILY_CAP, capDailyXp, LevelInfo, buildXpRollover, xpMultiplier } from '@/lib/gamification'
 import LevelRing from '@/components/LevelRing'
@@ -112,12 +112,13 @@ export default function Dashboard() {
     if (!profileHydrated || !profile.completedOnboarding) return
     getFoodLogs(today).then(setTodayFoods)
     getWaterLog(today).then(async ml => {
-      // الماء المضاف من أزرار الويدجت أثناء إغلاق التطبيق — نضيفه لسجل اليوم
-      const pending = await consumePendingWaterWidget()
-      const total = Math.min(ml + pending, 6000)
-      if (pending > 0) setWaterLog(today, total)
+      // إن كان الويدجت فيه تعديل غير مُزامن (إضافة/تراجع/مسح أثناء الإغلاق)
+      // نعتمد قيمته كقيمة اليوم، وإلا نعتمد سجل Supabase
+      const st = await getWaterWidgetState()
+      const total = st.dirty ? st.waterMl : ml
+      if (st.dirty && total !== ml) setWaterLog(today, total)
       setWaterMlState(total)
-      syncWaterWidget(total, profile.targetWater ?? 2500)   // حدّث ويدجت الشاشة الرئيسية
+      syncWaterWidget(total, profile.targetWater ?? 2500)   // يكتب القيمة المرجعية ويصفّر إشارة التعديل
     })
     getWeightEntries().then(entries => {
       if (entries.length > 0) {

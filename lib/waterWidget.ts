@@ -20,19 +20,28 @@ export async function syncWaterWidget(waterMl: number, targetMl: number): Promis
   } catch { /* silent */ }
 }
 
-/** يسحب الماء المضاف من أزرار الويدجت (أثناء إغلاق التطبيق) ويصفّره — يُعيد المقدار بالمل */
-export async function consumePendingWaterWidget(): Promise<number> {
+/**
+ * يقرأ حالة الويدجت: إن كان فيه تعديل غير مُزامن (إضافة/تراجع/مسح من الويدجت
+ * أثناء إغلاق التطبيق) يُعيد { dirty:true, waterMl } — والتطبيق يعتمد waterMl
+ * كقيمة اليوم. غير ذلك يُعيد dirty:false.
+ */
+export async function getWaterWidgetState(): Promise<{ dirty: boolean; waterMl: number }> {
   try {
     const w = window as unknown as {
       Capacitor?: {
         isNativePlatform?: () => boolean
-        Plugins?: Record<string, { consumePendingWater?: () => Promise<{ pendingMl?: number }> }>
+        Plugins?: Record<string, { getWidgetState?: () => Promise<{ dirty?: boolean; waterMl?: number; date?: string }> }>
       }
     }
-    if (!w.Capacitor?.isNativePlatform?.()) return 0
+    if (!w.Capacitor?.isNativePlatform?.()) return { dirty: false, waterMl: 0 }
     const plugin = w.Capacitor?.Plugins?.WaterWidget
-    if (!plugin?.consumePendingWater) return 0
-    const r = await plugin.consumePendingWater()
-    return typeof r?.pendingMl === 'number' && r.pendingMl > 0 ? r.pendingMl : 0
-  } catch { return 0 }
+    if (!plugin?.getWidgetState) return { dirty: false, waterMl: 0 }
+    const r = await plugin.getWidgetState()
+    // تحقّق أن الحالة تخصّ اليوم الحالي (UTC) لتفادي قيمة يوم سابق
+    const today = new Date().toISOString().split('T')[0]
+    if (r?.dirty && r?.date === today && typeof r.waterMl === 'number') {
+      return { dirty: true, waterMl: Math.max(0, Math.min(r.waterMl, 6000)) }
+    }
+    return { dirty: false, waterMl: 0 }
+  } catch { return { dirty: false, waterMl: 0 } }
 }
