@@ -109,42 +109,162 @@ export default function WorkoutPlanGenerator() {
     }
   }
 
-  // يعرض الخطة سطراً سطراً، ويضيف زر فيديو YouTube جنب كل سطر تمرين
-  const renderPlan = (plan: string) => {
-    const lines = plan.split('\n')
-    // أسطر التمارين تبدأ بنقطة/شرطة. نتوقّف عن إضافة الفيديو بعد قسم النصائح
-    const tipsIdx = lines.findIndex(l => /💡|نصائح|tips/i.test(l))
-    const isBullet = (s: string) => /^[•\-–▪●*]\s+/.test(s.trim())
+  // ── تحليل نص الخطة إلى بنية منظّمة (أيام + تمارين + حرق) ──
+  const parsePlan = (plan: string) => {
+    const isDivider = (s: string) => /^[━─\-=_]{3,}$/.test(s.replace(/\s/g, ''))
+    const isBullet  = (s: string) => /^[•\-–▪●*]\s+/.test(s)
+    const dayRe     = /^📌/
+    const tipsRe    = /💡|^نصائح|^tips/i
 
-    return lines.map((line, i) => {
-      const trimmed = line.trim()
-      const exercise = isBullet(trimmed) && (tipsIdx === -1 || i < tipsIdx)
-      if (!exercise) {
-        return (
-          <div key={i} className="text-[13px] text-white/80 leading-relaxed whitespace-pre-wrap break-words">
-            {line || ' '}
-          </div>
-        )
+    type Item = { text: string; video: boolean }
+    type Day  = { title: string; items: Item[]; burn: string; isRest: boolean }
+
+    let title = '', meta = ''
+    const days: Day[] = []
+    const tips: string[] = []
+    let cur: Day | null = null
+    let inTips = false
+
+    for (const raw of plan.split('\n')) {
+      const s = raw.trim()
+      if (!s || isDivider(s)) continue
+
+      if (dayRe.test(s)) {
+        inTips = false
+        cur = {
+          title: s.replace(/^📌\s*/, '').trim(),
+          items: [], burn: '',
+          isRest: /راحة|rest/i.test(s),
+        }
+        days.push(cur)
+        continue
       }
-      // اسم التمرين = النص قبل الشرطة/القوس (نحذف المجموعات×التكرارات)
-      const name = trimmed.replace(/^[•\-–▪●*]\s+/, '').split(/\s[—–-]\s|\(|:|\d/)[0].trim()
-      const q = encodeURIComponent(`${name} ${lang === 'en' ? 'exercise proper form' : 'تمرين طريقة الأداء'}`)
-      return (
-        <div key={i} className="flex items-start gap-2 py-0.5">
-          <span className="flex-1 text-[13px] text-white/80 leading-relaxed whitespace-pre-wrap break-words">{line}</span>
-          <a
-            href={`https://www.youtube.com/results?search_query=${q}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t('فيديو التمرين', 'Exercise video')}
-            className="flex-shrink-0 mt-0.5 px-1.5 py-0.5 rounded-md active:scale-90 transition-transform"
-            style={{ background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.25)' }}
-          >
-            <span className="text-xs">🎥</span>
-          </a>
-        </div>
-      )
-    })
+      if (tipsRe.test(s) && !isBullet(s)) { inTips = true; cur = null; continue }
+      if (/🏋/.test(s) && !title) { title = s.replace(/🏋️|🏋|️/g, '').trim(); continue }
+      if (/🎯/.test(s) && !meta)  { meta = s.replace(/🎯/g, '').trim(); continue }
+      if (/🔥/.test(s)) {
+        if (cur) cur.burn = s.replace(/🔥/g, '').replace(/حرق تقريبي:?|approx\.?\s*burn:?/i, '').trim()
+        continue
+      }
+      if (isBullet(s)) {
+        const text = s.replace(/^[•\-–▪●*]\s+/, '').trim()
+        if (inTips) tips.push(text)
+        else if (cur) cur.items.push({ text, video: !cur.isRest })
+        continue
+      }
+      if (cur && !inTips) cur.items.push({ text: s, video: false })
+    }
+
+    const totalBurn = days.reduce((sum, d) => {
+      const m = d.burn.match(/\d[\d,]*/)
+      return sum + (m ? parseInt(m[0].replace(/,/g, '')) : 0)
+    }, 0)
+
+    return { title, meta, days, tips, totalBurn }
+  }
+
+  const ytLink = (exText: string) => {
+    const name = exText.split(/\s[—–-]\s|\(|:|\d/)[0].trim()
+    const q = encodeURIComponent(`${name} ${lang === 'en' ? 'exercise proper form' : 'تمرين طريقة الأداء'}`)
+    return `https://www.youtube.com/results?search_query=${q}`
+  }
+
+  // ── عرض الخطة كبطاقات يومية منظّمة ──
+  const renderPlan = (plan: string) => {
+    const { meta, days, tips, totalBurn } = parsePlan(plan)
+    const metaChips = meta.split('|').map(s => s.trim()).filter(Boolean)
+
+    return (
+      <div className="flex flex-col gap-3">
+        {(metaChips.length > 0 || totalBurn > 0) && (
+          <div className="flex flex-wrap gap-1.5">
+            {metaChips.map((c, i) => (
+              <span key={i} className="text-[11px] font-bold px-2.5 py-1 rounded-lg"
+                style={{ background: 'rgba(151,227,37,0.12)', color: '#97E325', border: '1px solid rgba(151,227,37,0.22)' }}>
+                {c}
+              </span>
+            ))}
+            {totalBurn > 0 && (
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.22)' }}>
+                🔥 ≈{totalBurn.toLocaleString()} {t('سعرة/أسبوع', 'kcal/week')}
+              </span>
+            )}
+          </div>
+        )}
+
+        {days.map((day, di) => {
+          const exCount = day.items.filter(x => x.video).length
+          if (day.isRest) {
+            return (
+              <div key={di} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                <span className="text-base">😴</span>
+                <span className="text-[13px] font-semibold text-white/45">{day.title}</span>
+              </div>
+            )
+          }
+          return (
+            <div key={di} className="rounded-xl overflow-hidden"
+              style={{ background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(151,227,37,0.16)' }}>
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5"
+                style={{ background: 'rgba(151,227,37,0.08)', borderBottom: '1px solid rgba(151,227,37,0.14)' }}>
+                <span className="text-[13px] font-bold text-white/90 truncate">{day.title}</span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {exCount > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: 'rgba(0,212,255,0.12)', color: '#00D4FF' }}>
+                      {exCount} {t('تمرين', 'ex')}
+                    </span>
+                  )}
+                  {day.burn && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171' }}>
+                      🔥 {day.burn}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="px-3.5 py-1">
+                {day.items.map((it, ii) => (
+                  <div key={ii}
+                    className="flex items-center gap-2.5 py-2"
+                    style={{ borderBottom: ii < day.items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                    {it.video && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#97E325' }} />}
+                    <span className={`flex-1 text-[13px] leading-snug break-words ${it.video ? 'text-white/85' : 'text-white/45 font-semibold'}`}>
+                      {it.text}
+                    </span>
+                    {it.video && (
+                      <a href={ytLink(it.text)} target="_blank" rel="noopener noreferrer"
+                        aria-label={t('فيديو التمرين', 'Exercise video')}
+                        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center active:scale-90 transition-transform"
+                        style={{ background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.28)' }}>
+                        <span className="text-xs">🎥</span>
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+
+        {tips.length > 0 && (
+          <div className="rounded-xl px-3.5 py-3"
+            style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.2)' }}>
+            <p className="text-[12px] font-bold mb-1.5" style={{ color: '#a78bfa' }}>💡 {t('نصائح', 'Tips')}</p>
+            <div className="flex flex-col gap-1.5">
+              {tips.map((tip, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-[11px] mt-0.5" style={{ color: '#a78bfa' }}>◆</span>
+                  <span className="flex-1 text-[12px] text-white/70 leading-snug">{tip}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   const chip = (active: boolean) => ({
