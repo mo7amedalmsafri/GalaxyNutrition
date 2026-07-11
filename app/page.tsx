@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil, Gift, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Droplets, Activity, Trash2, Menu, X, User, Bell, Moon, Sun, Languages, Info, Star, Pencil, Gift, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import BMICircle from '@/components/BMICircle'
 import CalorieRing from '@/components/CalorieRing'
@@ -14,7 +14,10 @@ import FoodSearchBar from '@/components/FoodSearchBar'
 import TourOverlay, { TourStep } from '@/components/TourOverlay'
 import { calculateBMI, getTodayDate } from '@/lib/utils'
 import { FoodItem } from '@/lib/types'
-import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, useInboxUnread } from '@/lib/store'
+import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useIsNativeApp, useInboxUnread, useUserEmail } from '@/lib/store'
+import { canAddMeal, recordMealAdd, getXpAdBoost, canBoostXp, grantXpAdBoost, getXpBoostUses, XP_AD_BOOST_MAX_USES, isProUser } from '@/lib/limits'
+import WatchAdButton from '@/components/WatchAdButton'
+import MealLimitModal from '@/components/MealLimitModal'
 import { getFoodLogs, addFoodLog, deleteFoodLog, updateFoodLog, getWaterLog, setWaterLog, getWeightEntries, addWeightEntry, loadProfileFromSupabase, saveXpToSupabase } from '@/lib/db'
 import { useSavedMeals } from '@/lib/savedMeals'
 import { syncWaterWidget, getWaterWidgetState } from '@/lib/waterWidget'
@@ -67,6 +70,7 @@ export default function Dashboard() {
   const router = useRouter()
   const t = useT()
   const isNativeApp = useIsNativeApp()
+  const email = useUserEmail()
   const today = getTodayDate()
 
   // التاريخ المعروض (للتصفّح للأيام السابقة — عرض فقط). الإضافات دائماً لليوم الحقيقي.
@@ -85,6 +89,9 @@ export default function Dashboard() {
   const [levelUpInfo, setLevelUpInfo] = useState<LevelInfo | null>(null)
   const [todayFoods, setTodayFoods] = useState<FoodItem[]>([])
   const [editingFood, setEditingFood] = useState<FoodItem | null>(null)
+  // بوابة حد الوجبات المجانية: تحمل الوجبة المعلّقة حتى مشاهدة الإعلان
+  const [mealGate, setMealGate] = useState<Omit<FoodItem, 'id' | 'loggedAt'> | null>(null)
+  const [, forceTick] = useState(0)   // لإعادة الرسم بعد منح مكافأة إعلان
   const savedMeals = useSavedMeals()
   const inboxUnread = useInboxUnread()
   const [showTour, setShowTour] = useState(false)
@@ -208,8 +215,8 @@ export default function Dashboard() {
   const earn = (amount: number) => {
     const currentPending = profile.xpPending ?? 0
     const oldTotal0    = (profile.xpLocked ?? 0) + currentPending
-    // مضاعِف الجائزة: +٢٥٪ XP من المستوى ٤
-    const boosted      = Math.round(amount * xpMultiplier(getCurrentLevel(oldTotal0).level))
+    // مضاعِف الجائزة: +٢٥٪ XP من المستوى ٤ + تعزيز الإعلان (+15% لكل مشاهدة، حتى مرتين)
+    const boosted      = Math.round(amount * (xpMultiplier(getCurrentLevel(oldTotal0).level) + getXpAdBoost()))
     const actual = capDailyXp(currentPending, boosted)
     if (actual <= 0) return   // daily cap already reached
 
@@ -247,8 +254,16 @@ export default function Dashboard() {
 
   const handleAddFood = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
     if (!isToday) return
+    // حد الوجبات المجانية — إن تجاوزه (وغير مشترك) نعرض بوابة الإعلان بدل الإضافة
+    if (!canAddMeal(email)) { setMealGate(item); return }
+    await doAddFood(item)
+  }
+
+  // الإضافة الفعلية بعد اجتياز الحد (أو مشاهدة الإعلان)
+  const doAddFood = async (item: Omit<FoodItem, 'id' | 'loggedAt'>) => {
     const tempItem: FoodItem = { ...item, id: `tmp-${Date.now()}`, loggedAt: new Date().toISOString() }
     setTodayFoods(prev => [...prev, tempItem])
+    recordMealAdd()   // عدّاد تصاعدي — لا ينقص بالحذف
     const saved = await addFoodLog(today, item)
     if (saved) setTodayFoods(prev => prev.map(f => f.id === tempItem.id ? saved : f))
     earn(XP_REWARDS.LOG_FOOD)
@@ -451,6 +466,46 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* ── تعزيز XP بالإعلان — للمجانيين، اليوم الحالي فقط، بحد مرتين ── */}
+      {isToday && !isProUser(email) && (() => {
+        const uses = getXpBoostUses()
+        const boostPct = Math.round(getXpAdBoost() * 100)
+        const maxed = !canBoostXp()
+        return (
+          <div className="rounded-2xl p-3.5"
+            style={{ background: 'rgba(151,227,37,0.06)', border: '1px solid rgba(151,227,37,0.2)' }}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Zap size={16} color="#97E325" className="flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-white/90 leading-tight">
+                    {boostPct > 0
+                      ? t(`تعزيز XP مُفعّل +${boostPct}%`, `XP boost active +${boostPct}%`)
+                      : t('عزّز نقاط خبرتك', 'Boost your XP')}
+                  </p>
+                  <p className="text-[10px] text-white/40 leading-tight mt-0.5">
+                    {maxed
+                      ? t('استخدمت تعزيزَي اليوم — يتجدّد غداً', "Used today's 2 boosts — resets tomorrow")
+                      : t(`+15% لبقية اليوم · ${uses}/${XP_AD_BOOST_MAX_USES}`, `+15% for the rest of today · ${uses}/${XP_AD_BOOST_MAX_USES}`)}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0"
+                style={{ background: 'rgba(151,227,37,0.15)', color: '#97E325' }}>+15% XP</span>
+            </div>
+            {!maxed && (
+              <WatchAdButton
+                scheme="green"
+                reloadAfter={false}
+                label={t('شاهد إعلاناً وعزّز نقاطك +15%', 'Watch an ad to boost XP +15%')}
+                successLabel={t('تم التعزيز! ⚡', 'Boosted! ⚡')}
+                onReward={() => { grantXpAdBoost(); forceTick(n => n + 1) }}
+              />
+            )}
+          </div>
+        )
+      })()}
 
       {/* Food Search Bar — اليوم الحالي فقط */}
       {isToday ? (
@@ -774,6 +829,17 @@ export default function Dashboard() {
       {showFoodModal && (
         <FoodEntryModal onSave={handleAddFood} onClose={() => setShowFoodModal(false)} />
       )}
+
+      {/* بوابة حد الوجبات المجانية — تُكمل الإضافة بعد مشاهدة الإعلان */}
+      <MealLimitModal
+        open={mealGate !== null}
+        onClose={() => setMealGate(null)}
+        onGranted={() => {
+          const pending = mealGate
+          setMealGate(null)
+          if (pending) doAddFood(pending)
+        }}
+      />
 
       {/* ── الجولة التعريفية ── */}
       {showTour && (

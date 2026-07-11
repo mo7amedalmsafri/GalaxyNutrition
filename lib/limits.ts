@@ -162,6 +162,76 @@ export function hasPremiumAccess(email?: string | null, createdAtISO?: string | 
   return trialDaysLeft(createdAtISO) > 0
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🍽️ حد الوجبات اليومي للمجانيين — وجبتان/يوم، ثم إعلان لكل وجبة إضافية
+//  العدّاد تصاعدي فقط: يزيد عند كل إضافة ولا ينقص بالحذف (لمنع الالتفاف)
+// ══════════════════════════════════════════════════════════════════
+export const FREE_MEALS_PER_DAY = 2
+const MEAL_COUNT_KEY   = 'dietak-meal-count'    // { date, count }
+const MEAL_ADBONUS_KEY = 'dietak-meal-adbonus'  // { date, bonus } وجبات إضافية من الإعلانات
+
+function todayStr(): string { return new Date().toISOString().split('T')[0] }
+
+function readDayNum(key: string): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return 0
+    const s = JSON.parse(raw)
+    return s.date === todayStr() ? (s.n || 0) : 0
+  } catch { return 0 }
+}
+function writeDayNum(key: string, n: number): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(key, JSON.stringify({ date: todayStr(), n }))
+}
+
+/** عدد الوجبات المُضافة اليوم (تصاعدي — لا ينقص بالحذف) */
+export function getTodayMealCount(): number { return readDayNum(MEAL_COUNT_KEY) }
+
+/** سجّل إضافة وجبة (يُستدعى بعد كل إضافة ناجحة بأي طريقة) */
+export function recordMealAdd(): void { writeDayNum(MEAL_COUNT_KEY, getTodayMealCount() + 1) }
+
+/** وجبات إضافية مُنِحت من مشاهدة الإعلانات اليوم */
+export function getMealAdBonus(): number { return readDayNum(MEAL_ADBONUS_KEY) }
+
+/** يمنح وجبة إضافية واحدة بعد مشاهدة إعلان */
+export function grantMealFromAd(): void { writeDayNum(MEAL_ADBONUS_KEY, getMealAdBonus() + 1) }
+
+/** هل يُسمح بإضافة وجبة الآن؟ (Pro = دائماً، وإلا ضمن الحد + مكافآت الإعلانات) */
+export function canAddMeal(email?: string | null): boolean {
+  if (isProUser(email)) return true
+  return getTodayMealCount() < FREE_MEALS_PER_DAY + getMealAdBonus()
+}
+
+/** المتبقّي من وجبات اليوم المجانية ('∞' لـ Pro) */
+export function mealsLeft(email?: string | null): number | '∞' {
+  if (isProUser(email)) return '∞'
+  return Math.max(0, FREE_MEALS_PER_DAY + getMealAdBonus() - getTodayMealCount())
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ⚡ تعزيز XP بالإعلان — +15% لبقية اليوم، بحد مرتين/يوم (حتى +30%)
+// ══════════════════════════════════════════════════════════════════
+export const XP_AD_BOOST_STEP = 0.15
+export const XP_AD_BOOST_MAX_USES = 2
+const XP_BOOST_KEY = 'dietak-xp-adboost'   // { date, n } عدد مرات التعزيز اليوم
+
+/** عدد مرات تعزيز XP المُستخدمة اليوم */
+export function getXpBoostUses(): number { return readDayNum(XP_BOOST_KEY) }
+
+/** قيمة التعزيز الإضافي الحالي (0 أو 0.15 أو 0.30) */
+export function getXpAdBoost(): number { return getXpBoostUses() * XP_AD_BOOST_STEP }
+
+/** هل يمكن مشاهدة إعلان تعزيز آخر اليوم؟ */
+export function canBoostXp(): boolean { return getXpBoostUses() < XP_AD_BOOST_MAX_USES }
+
+/** يزيد تعزيز XP بمقدار خطوة واحدة (بحد أقصى) */
+export function grantXpAdBoost(): void {
+  if (!canBoostXp()) return
+  writeDayNum(XP_BOOST_KEY, getXpBoostUses() + 1)
+}
+
 // ── Scan limits ───────────────────────────────────────────────────────
 function readScanStore(): { date: string; count: number } | null {
   if (typeof window === 'undefined') return null
