@@ -17,6 +17,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		AA10000000000000000000A2 /* WaterWidgetPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000A1 /* WaterWidgetPlugin.swift */; };
 		AA10000000000000000000A4 /* MyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000A3 /* MyViewController.swift */; };
+		AA10000000000000000000D2 /* HealthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000D1 /* HealthPlugin.swift */; };
 		AA10000000000000000000B5 /* DietakWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000B2 /* DietakWidget.swift */; };
 		AA10000000000000000000B6 /* DietakWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000B1 /* DietakWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -34,6 +35,7 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		AA10000000000000000000A1 /* WaterWidgetPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterWidgetPlugin.swift; sourceTree = "<group>"; };
 		AA10000000000000000000A3 /* MyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyViewController.swift; sourceTree = "<group>"; };
+		AA10000000000000000000D1 /* HealthPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthPlugin.swift; sourceTree = "<group>"; };
 		AA10000000000000000000A5 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		AA10000000000000000000B1 /* DietakWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DietakWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA10000000000000000000B2 /* DietakWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietakWidget.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				AA10000000000000000000A3 /* MyViewController.swift */,
 				AA10000000000000000000A1 /* WaterWidgetPlugin.swift */,
+				AA10000000000000000000D1 /* HealthPlugin.swift */,
 				AA10000000000000000000A5 /* App.entitlements */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
@@ -246,6 +249,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				AA10000000000000000000A2 /* WaterWidgetPlugin.swift in Sources */,
 				AA10000000000000000000A4 /* MyViewController.swift in Sources */,
+				AA10000000000000000000D2 /* HealthPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

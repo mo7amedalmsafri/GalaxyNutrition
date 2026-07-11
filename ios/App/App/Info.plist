@@ -4,6 +4,10 @@
 <dict>
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>يستخدم دايتك بيانات النشاط والسعرات المحروقة من تطبيق الصحة لعرض حرقك اليومي وحساب صافي السعرات.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>يستخدم دايتك تطبيق الصحة لمزامنة بيانات لياقتك.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

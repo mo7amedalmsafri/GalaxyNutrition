@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dumbbell, Plus, Trash2, Zap, Search, X } from 'lucide-react'
+import { Dumbbell, Plus, Trash2, Zap, Search, X, HeartPulse, RefreshCw } from 'lucide-react'
 import GlassCard from '@/components/GlassCard'
 import WorkoutPlanGenerator from '@/components/WorkoutPlanGenerator'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT } from '@/lib/store'
 import { getFoodLogs } from '@/lib/db'
 import { getTodayDate } from '@/lib/utils'
+import { isHealthPlatform, requestHealthAccess, getTodayBurnedFromHealth } from '@/lib/health'
 
 // ── Exercise catalog with MET values ─────────────────────────────────────────
 const EXERCISES = [
@@ -100,6 +101,39 @@ export default function WorkoutPage() {
     })
   }, [])
 
+  // ── Apple Health — active energy burned (Apple Watch / Whoop / iPhone) ──────
+  const [healthAvailable, setHealthAvailable] = useState(false)
+  const [healthBurned, setHealthBurned] = useLocalStorage<number>('galaxy-health-burned', 0)
+  const [healthConnected, setHealthConnected] = useLocalStorage<boolean>('galaxy-health-connected', false)
+  const [healthLoading, setHealthLoading] = useState(false)
+
+  const refreshHealth = async () => {
+    if (!isHealthPlatform()) return
+    setHealthLoading(true)
+    const kcal = await getTodayBurnedFromHealth()
+    setHealthBurned(kcal)
+    setHealthLoading(false)
+  }
+
+  const connectHealth = async () => {
+    setHealthLoading(true)
+    const granted = await requestHealthAccess()
+    if (granted) {
+      setHealthConnected(true)
+      const kcal = await getTodayBurnedFromHealth()
+      setHealthBurned(kcal)
+    }
+    setHealthLoading(false)
+  }
+
+  // كشف المنصة + قراءة تلقائية عند فتح الصفحة إن كان مربوطاً
+  useEffect(() => {
+    const avail = isHealthPlatform()
+    setHealthAvailable(avail)
+    if (avail && healthConnected) refreshHealth()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Exercise selection state ───────────────────────────────────────────────
   const [search,     setSearch]     = useState('')
   const [selectedEx, setSelectedEx] = useState<CatalogEx | null>(null)  // from catalog
@@ -113,10 +147,12 @@ export default function WorkoutPage() {
   const [editedCals,  setEditedCals]  = useState(0)
 
   // ── Derived numbers ───────────────────────────────────────────────────────
-  const totalBurned = workoutDay.exercises.reduce((s, e) => s + e.calories, 0)
-  const calTarget   = targets.calories ?? 2000
-  const netCals     = calTarget + totalBurned - caloriesEaten
-  const netPositive = netCals >= 0
+  const manualBurned = workoutDay.exercises.reduce((s, e) => s + e.calories, 0)
+  const healthActive = (healthAvailable && healthConnected) ? healthBurned : 0
+  const totalBurned  = manualBurned + healthActive          // تمارين يدوية + Apple Health
+  const calTarget    = targets.calories ?? 2000
+  const netCals      = calTarget + totalBurned - caloriesEaten
+  const netPositive  = netCals >= 0
 
   // ── Filtered catalog ──────────────────────────────────────────────────────
   const filteredExs = search.trim()
@@ -229,9 +265,51 @@ export default function WorkoutPage() {
           </div>
           <p className="text-[11px] text-white/30">
             {workoutDay.exercises.length} {t('تمرين', 'exercises')}
+            {healthActive > 0 && (
+              <span style={{ color: '#f472b6' }}> + {healthActive} 🍎</span>
+            )}
           </p>
         </GlassCard>
       </div>
+
+      {/* ── Apple Health connect / status ─────────────────────────────────── */}
+      {healthAvailable && (
+        <div className="rounded-2xl p-4 flex items-center gap-3"
+          style={{
+            background: healthConnected ? 'rgba(244,114,182,0.07)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${healthConnected ? 'rgba(244,114,182,0.25)' : 'rgba(255,255,255,0.09)'}`,
+          }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(244,114,182,0.14)' }}>
+            <HeartPulse size={20} color="#f472b6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white/85">{t('تطبيق الصحة Apple Health', 'Apple Health')}</p>
+            <p className="text-[11px] text-white/35 leading-tight mt-0.5">
+              {healthConnected
+                ? t(`متصل — ${healthBurned} سعرة نشاط اليوم`, `Connected — ${healthBurned} kcal active today`)
+                : t('اربط لسحب سعرات الحرق تلقائياً (ساعة آبل، Whoop…)', 'Connect to auto-import burned calories (Apple Watch, Whoop…)')}
+            </p>
+          </div>
+          {healthConnected ? (
+            <button onClick={refreshHealth} disabled={healthLoading}
+              className="p-2.5 rounded-xl flex-shrink-0"
+              style={{ background: 'rgba(244,114,182,0.12)' }}>
+              <RefreshCw size={16} color="#f472b6"
+                className={healthLoading ? 'animate-spin' : ''} />
+            </button>
+          ) : (
+            <button onClick={connectHealth} disabled={healthLoading}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold flex-shrink-0 flex items-center gap-1.5"
+              style={{ background: 'rgba(244,114,182,0.16)', color: '#f472b6', opacity: healthLoading ? 0.6 : 1 }}>
+              {healthLoading
+                ? <span className="w-3.5 h-3.5 border-2 border-[#f472b6]/30 border-t-[#f472b6] rounded-full animate-spin" />
+                : <HeartPulse size={14} />}
+              {t('ربط', 'Connect')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Net Calories ──────────────────────────────────────────────────── */}
       <div className="rounded-2xl p-4 flex items-center justify-between gap-3"
