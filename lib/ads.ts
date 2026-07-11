@@ -4,10 +4,16 @@
 // (نفس النمط الموثوق في الدفع والويدجت، لأن wrapper الـ npm يتجمّد مع server.url).
 // على الويب أو غير iOS: كل الدوال تعود بقيَم محايدة بدون أخطاء.
 
-// معرّف وحدة المكافأة الحقيقي لتطبيق Dietak (يمكن تجاوزه بمتغيّر بيئة)
-const REWARDED_IOS = process.env.NEXT_PUBLIC_ADMOB_REWARDED_IOS || 'ca-app-pub-2680565418590912/5596047384'
-// إعلانات حقيقية افتراضياً — لعرض إعلانات تجريبية اضبط NEXT_PUBLIC_ADMOB_TEST=1
-const USE_TEST = process.env.NEXT_PUBLIC_ADMOB_TEST === '1'
+// ⚠️ وضع التجربة: إعلانات Google التجريبية (آمنة للضغط).
+//    قبل النشر الرسمي: غيّر AD_TEST_MODE إلى false لتفعيل إعلاناتك الحقيقية.
+const AD_TEST_MODE = true
+
+// معرّف وحدة المكافأة الحقيقي لتطبيق Dietak | والتجريبي من Google
+const REAL_REWARDED_IOS = 'ca-app-pub-2680565418590912/5596047384'
+const TEST_REWARDED_IOS = 'ca-app-pub-3940256099942544/1712485313'
+
+const REWARDED_IOS = AD_TEST_MODE ? TEST_REWARDED_IOS : REAL_REWARDED_IOS
+const USE_TEST = AD_TEST_MODE
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type AdMobPlugin = {
