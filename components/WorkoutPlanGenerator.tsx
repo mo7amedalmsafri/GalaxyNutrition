@@ -78,7 +78,8 @@ export default function WorkoutPlanGenerator() {
 
   const generate = async () => {
     if (loading) return
-    if (!ent.allowed) { setBlocked(true); return }
+    // خطة التمارين للمشتركين فقط — حتى التجربة المجانية لا تفتحها
+    if (!ent.isPro) { setBlocked(true); return }
     setLoading(true); setError(''); setBlocked(false)
     try {
       const res = await fetch('/api/generate-workout', {
@@ -430,7 +431,7 @@ export default function WorkoutPlanGenerator() {
           </div>
 
           {error && <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>}
-          {blocked && <ProUpsell text={t('انتهت تجربتك المجانية — اشترك لتوليد خطط التمارين', 'Your free trial ended — subscribe to generate training plans')} />}
+          {blocked && <ProUpsell text={t('خطة التمارين بالذكاء الاصطناعي للمشتركين فقط ✨', 'AI training plans are for Pro subscribers only ✨')} />}
 
           <button onClick={generate} disabled={loading}
             className="btn-galaxy w-full py-3.5 flex items-center justify-center gap-2 disabled:opacity-50">
