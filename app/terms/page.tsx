@@ -1,4 +1,5 @@
 import Logo from '@/components/Logo'
+import BackButton from '@/components/BackButton'
 
 export const metadata = {
   title: 'الشروط والأحكام | Dietak دايتك',
@@ -88,9 +89,10 @@ const SECTIONS = [
 export default function TermsPage() {
   return (
     <div
-      className="min-h-screen px-5 py-10"
+      className="min-h-screen px-5 pb-10 pt-20"
       style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(107,33,168,0.15) 0%, transparent 55%), #0a0014', direction: 'rtl' }}
     >
+      <BackButton />
       <div className="max-w-2xl mx-auto flex flex-col gap-6">
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-3 mb-2">
