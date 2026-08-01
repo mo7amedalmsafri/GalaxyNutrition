@@ -33,7 +33,12 @@ export async function proxy(request: NextRequest) {
      compared, wrong → 404). Session auth must not intercept it: the owner
      opens this link from any browser, logged in as nobody — and /terms
      missing from this exact list is what got the app rejected once. */
-  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner']
+  /* '/api/keepalive' must be here or the heartbeat never reaches the
+     database: the proxy 307s it to /login, the cron "succeeds" against the
+     login page, and the freeze it exists to prevent happens anyway — with a
+     green cron log saying everything is fine. Verified live before this line
+     existed: the route answered "Redirecting..." twenty times in a row. */
+  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner', '/api/keepalive']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!session && !isPublic) {
