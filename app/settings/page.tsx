@@ -675,10 +675,25 @@ export default function SettingsPage() {
             </button>
           )}
           {iapActive && (
-            <p className="text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              {t('اشتراكك عبر App Store — يُدار أو يُلغى من إعدادات حسابك في Apple',
-                 'Subscribed via the App Store — manage or cancel in your Apple account settings')}
-            </p>
+            <>
+              {/* Apple's rule: no app may cancel its own subscription — the
+                  most any app can do is take the user to Apple's own
+                  management sheet, and this link does exactly that. Capacitor
+                  treats the foreign host as external and hands it to the
+                  system, which opens it as the App Store's subscriptions
+                  screen. Also strengthens the 3.1.2 story: cancellation is
+                  one tap from the subscription card. */}
+              <a href="https://apps.apple.com/account/subscriptions"
+                target="_blank" rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl font-bold text-sm text-center block"
+                style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                {t('⚙️ إدارة / إلغاء الاشتراك', '⚙️ Manage / Cancel subscription')}
+              </a>
+              <p className="text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                {t('يفتح صفحة الاشتراكات في حسابك لدى Apple — الإلغاء يتم هناك حصريًا',
+                   'Opens the subscriptions page of your Apple account — cancellation happens there')}
+              </p>
+            </>
           )}
         </div>
 
