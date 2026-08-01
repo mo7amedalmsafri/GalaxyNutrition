@@ -25,3 +25,6 @@ Thumbs.db
 # TestSprite temp files
 testsprite_tests/tmp/
 ios-keys/
+
+.vercel
+.env*

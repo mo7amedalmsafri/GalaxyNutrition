@@ -29,7 +29,11 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   // الشروط والخصوصية عامتان — مطلب Apple 3.1.2: روابط فعّالة بلا تسجيل دخول
-  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms']
+  /* '/owner' carries its own gate (a derived secret key, constant-time
+     compared, wrong → 404). Session auth must not intercept it: the owner
+     opens this link from any browser, logged in as nobody — and /terms
+     missing from this exact list is what got the app rejected once. */
+  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!session && !isPublic) {
