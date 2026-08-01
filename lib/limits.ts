@@ -86,9 +86,22 @@ export function activatePro(code: string): boolean {
   return true
 }
 
-/** Removes the local Pro activation (admin bypass is not affected). */
+/** Removes the local Pro activation (admin bypass is not affected).
+ *
+ *  Also clears reward-Pro. The button that calls this says "deactivate", and a
+ *  user who presses it expects Pro OFF — measured otherwise on a real device:
+ *  deactivate, open the terms page, come back, and a leftover reward timer
+ *  flipped the card straight back to active. A hidden timer overriding an
+ *  explicit "no" reads as a bug every single time.
+ *
+ *  What this deliberately CANNOT clear is a live Apple subscription: RevenueCat
+ *  re-syncs it on the next mount, because someone who is actually paying must
+ *  stay Pro. The settings card hides this button in that case and explains
+ *  where the subscription is managed instead. */
 export function deactivatePro(): void {
-  if (typeof window !== 'undefined') localStorage.removeItem(PRO_KEY)
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(PRO_KEY)
+  localStorage.removeItem(REWARD_PRO_KEY)
 }
 
 /** يضبط علامة Pro المحلية مباشرة (تُستخدم لمزامنة اشتراك Apple/RevenueCat) */

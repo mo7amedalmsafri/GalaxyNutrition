@@ -109,6 +109,7 @@ export default function SettingsPage() {
   const [proError, setProError]         = useState('')
   const [proSuccess, setProSuccess]     = useState(false)
   const [stripeActive, setStripeActive] = useState(false)   // paid via Stripe
+  const [iapActive, setIapActive]       = useState(false)   // paid via Apple (RevenueCat)
   const [subLoading, setSubLoading]     = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   // Apple IAP (تطبيق iOS)
@@ -147,7 +148,7 @@ export default function SettingsPage() {
     if (!purchasesAvailable()) return
     getProPrice().then(p => { if (p) setIapPrice(p) })
     checkProEntitlement().then(active => {
-      if (active) { setProLocal(true); setProActive(true) }
+      if (active) { setProLocal(true); setProActive(true); setIapActive(true) }
     })
   }, [])
 
@@ -660,12 +661,24 @@ export default function SettingsPage() {
             </button>
           )}
 
-          {/* Deactivate code-only Pro */}
-          {!isAdmin(userEmail) && !stripeActive && (
+          {/* Deactivate code-only Pro.
+              Hidden when an Apple subscription is the source: RevenueCat
+              re-syncs the entitlement on every mount, so the button would
+              "work", survive until the next page visit, and flip back —
+              measured live (deactivate → open terms → back → active again).
+              A control that cannot do what it says must not be offered;
+              the note says where that subscription is actually managed. */}
+          {!isAdmin(userEmail) && !stripeActive && !iapActive && (
             <button onClick={handleDeactivatePro}
               className="text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
               {t('إلغاء التفعيل', 'Deactivate')}
             </button>
+          )}
+          {iapActive && (
+            <p className="text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              {t('اشتراكك عبر App Store — يُدار أو يُلغى من إعدادات حسابك في Apple',
+                 'Subscribed via the App Store — manage or cancel in your Apple account settings')}
+            </p>
           )}
         </div>
 
