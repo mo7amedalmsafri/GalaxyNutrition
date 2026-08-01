@@ -674,6 +674,33 @@ export default function SettingsPage() {
               {t('إلغاء التفعيل', 'Deactivate')}
             </button>
           )}
+          {/* Apple 3.1.2 requires the subscription facts IN the app — and they
+              were only on the upsell card, so the moment anyone subscribed,
+              the disclosure and both legal links VANISHED for them. Exactly
+              backwards: the person these disclosures exist for is the one
+              already paying. Found while recording the review video — the
+              subscribed account had nothing to point the camera at. */}
+          {!isAdmin(userEmail) && (
+            <>
+              <p className="text-[10px] text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {t(
+                  'يتجدد الاشتراك تلقائياً كل شهر ما لم يُلغَ قبل 24 ساعة على الأقل من نهاية الفترة الحالية. تُدار الاشتراكات وتُلغى من إعدادات Apple ID.',
+                  'Subscription automatically renews monthly unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID settings.'
+                )}
+              </p>
+              <div className="flex items-center justify-center gap-5">
+                <button onClick={() => router.push('/terms')}
+                  className="text-xs underline" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  {t('شروط الاستخدام', 'Terms of Use')}
+                </button>
+                <button onClick={() => router.push('/privacy')}
+                  className="text-xs underline" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  {t('سياسة الخصوصية', 'Privacy Policy')}
+                </button>
+              </div>
+            </>
+          )}
+
           {iapActive && (
             <>
               {/* Apple's rule: no app may cancel its own subscription — the
