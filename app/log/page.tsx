@@ -11,6 +11,7 @@ import { useSavedMeals } from '@/lib/savedMeals'
 import { useLocalStorage, StoredProfile, DEFAULT_PROFILE, useT, useUserEmail } from '@/lib/store'
 import { canAddMeal, recordMealAdd } from '@/lib/limits'
 import MealLimitModal from '@/components/MealLimitModal'
+import { MacroDonut } from '@/components/MacroDonut'
 
 const MEAL_ORDER: FoodItem['mealType'][] = ['breakfast', 'lunch', 'dinner', 'snack']
 const MEAL_ICONS: Record<string, string> = {
@@ -37,6 +38,8 @@ export default function LogPage() {
   const [showModal, setShowModal] = useState(false)
   const [editItem,  setEditItem]  = useState<FoodItem | null>(null)  // الوجبة المراد تعديلها
   const [mealGate,  setMealGate]  = useState<Omit<FoodItem, 'id' | 'loggedAt'> | null>(null)
+  /* الوجبة المفتوحة في بطاقة الماكروز */
+  const [detail,    setDetail]    = useState<FoodItem | null>(null)
   const savedMeals = useSavedMeals()
   const email = useUserEmail()
 
@@ -158,13 +161,17 @@ export default function LogPage() {
                       style={{ background: `${color}18` }}>
                       {MEAL_ICONS[food.mealType]}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    {/* الاسم يفتح تفاصيل الوجبة. زر حقيقي لا div: iOS لا يطلق
+                        click على عنصر غير تفاعلي، ولوحة المفاتيح تصل إليه. */}
+                    <button onClick={() => setDetail(food)}
+                      className="flex-1 min-w-0 text-start"
+                      aria-label={t(`تفاصيل ${food.name}`, `Details for ${food.name}`)}>
                       <p className="font-semibold text-sm text-white truncate">{food.name}</p>
                       <p className="text-xs text-white/40">
                         {food.quantity}{t('جم', 'g')} •{' '}
                         {t('بروتين', 'P')} {Math.round(food.nutrition.protein)}{t('جم', 'g')}
                       </p>
-                    </div>
+                    </button>
                     <div className="text-left flex-shrink-0">
                       <p className="font-bold text-sm" style={{ color }}>
                         {Math.round(food.nutrition.calories)}
@@ -231,6 +238,52 @@ export default function LogPage() {
         onClose={() => setMealGate(null)}
         onGranted={() => { const p = mealGate; setMealGate(null); if (p) doAdd(p) }}
       />
+
+      {/* تفاصيل الوجبة — حلقة الماكروز */}
+      {detail && (
+        <div
+          onClick={() => setDetail(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}>
+          {/* stopPropagation: الضغط داخل البطاقة يجب ألا يغلقها */}
+          <div onClick={e => e.stopPropagation()}
+            className="w-full max-w-xs rounded-3xl p-6 flex flex-col items-center gap-4 animate-fade-in"
+            style={{
+              background: 'linear-gradient(160deg, #1a1d27, #12141c)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.55)',
+            }}>
+            <div className="text-center">
+              <p className="font-black text-base text-white leading-snug">{detail.name}</p>
+              <p className="text-xs text-white/40 mt-1">
+                {detail.quantity}{t('جم', 'g')} · {t(MEAL_LABELS[detail.mealType]?.ar ?? '', MEAL_LABELS[detail.mealType]?.en ?? '')}
+              </p>
+            </div>
+
+            <MacroDonut
+              macros={detail.nutrition}
+              size={148}
+              labels={{
+                protein: t('بروتين', 'Protein'),
+                carbs:   t('كارب', 'Carbs'),
+                fat:     t('دهون', 'Fat'),
+                kcal:    t('سعرة', 'kcal'),
+              }}
+            />
+
+            <p className="text-[10px] text-center text-white/30 leading-relaxed">
+              {t('النِّسب محسوبة بالسعرات لا بالجرامات — جرام الدهون ٩ سعرات وجرام البروتين ٤.',
+                 'Shares are by calories, not grams — a gram of fat is 9 kcal, a gram of protein is 4.')}
+            </p>
+
+            <button onClick={() => setDetail(null)}
+              className="w-full py-3 rounded-2xl font-bold text-sm"
+              style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)' }}>
+              {t('إغلاق', 'Close')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal تعديل */}
       {editItem && (
