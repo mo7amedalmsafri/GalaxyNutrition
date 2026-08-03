@@ -28,25 +28,32 @@ export async function GET(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  /* email اختياري: بدونه حساب الاختبار (المسار الآلي)، ومعه أي حساب حقيقي —
+     الاستعمال العملي الأول كان المالك نفسه وقد نسي كلمة مروره والإيميلات
+     تتعثر: رابط مولَّد هنا يتجاوز الإيميل كاملًا ويثبت التدفق على جهازه. */
+  const target = searchParams.get('email')?.trim() || TEST_EMAIL
+
   try {
-    /* حساب الاختبار — يُنشأ مرة ويُعاد استعماله */
-    const seed = `Seed-${Math.random().toString(36).slice(2)}Aa1!`
-    const { error: createErr } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: seed,
-      email_confirm: true,
-    })
-    if (createErr && !/already|exists|registered/i.test(createErr.message)) throw createErr
+    if (target === TEST_EMAIL) {
+      /* حساب الاختبار — يُنشأ مرة ويُعاد استعماله */
+      const seed = `Seed-${Math.random().toString(36).slice(2)}Aa1!`
+      const { error: createErr } = await admin.auth.admin.createUser({
+        email: TEST_EMAIL,
+        password: seed,
+        email_confirm: true,
+      })
+      if (createErr && !/already|exists|registered/i.test(createErr.message)) throw createErr
+    }
 
     const { data, error } = await admin.auth.admin.generateLink({
       type: 'recovery',
-      email: TEST_EMAIL,
+      email: target,
     })
     if (error) throw error
 
     return NextResponse.json({
       ok: true,
-      email: TEST_EMAIL,
+      email: target,
       /* الرابط الذي كان سيُرسل في الإيميل حرفيًا */
       link: data.properties?.action_link,
       redirect_to: data.properties?.redirect_to,
