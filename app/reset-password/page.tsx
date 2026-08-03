@@ -27,6 +27,25 @@ export default function ResetPasswordPage() {
     const supabase = createClient()
     let alive = true
 
+    /* استهلاك الـhash يدويًا — الخط الحاسم، وسبب وجوده مُقاس لا مُتخيَّل.
+       مُشي التدفق كاملًا آليًا (owner-e2e): الرابط وصل، والتحويل إلى هنا نجح،
+       والتوكنات جالسة في الـhash صالحة — والمكتبة لم تستهلكها؛ بقيت الصفحة
+       على «جارٍ التحقق» والـhash كما هو. فالاستهلاك صار مسؤوليتنا المعلنة:
+       نقرأ التوكنين ونمرّرهما لـsetSession — نداء صريح لا سحر فيه ولا سباق. */
+    const params = new URLSearchParams(window.location.hash.slice(1))
+    const access_token = params.get('access_token')
+    const refresh_token = params.get('refresh_token')
+    if (access_token && refresh_token) {
+      supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
+        if (!alive) return
+        if (data.session && !error) {
+          /* التوكن استُهلك — يُمسح من الشريط كي لا يُنسخ مع الرابط */
+          window.history.replaceState(null, '', window.location.pathname)
+          setReady(true)
+        }
+      })
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (alive && data.session) setReady(true)
     })
