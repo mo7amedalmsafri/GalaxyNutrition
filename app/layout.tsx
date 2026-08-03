@@ -3,6 +3,7 @@ import './globals.css'
 import GalaxyBackground from '@/components/GalaxyBackground'
 import ConditionalLayout from '@/components/ConditionalLayout'
 import ThemeProvider from '@/components/ThemeProvider'
+import RecoveryCatcher from '@/components/RecoveryCatcher'
 
 export const metadata: Metadata = {
   title: 'Dietak | دايتك',
@@ -40,6 +41,7 @@ export default function RootLayout({
       </head>
       <body className="page-wrapper">
         <GalaxyBackground />
+        <RecoveryCatcher />
         <ThemeProvider>
           <ConditionalLayout>{children}</ConditionalLayout>
         </ThemeProvider>

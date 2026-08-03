@@ -65,8 +65,15 @@ export default function LoginPage() {
     setForgotLoading(true)
     setForgotError('')
     const supabase = createClient()
+    /* Through /auth/callback, never straight to /reset-password.
+       The recovery link carries a ?code= that must be exchanged for a session
+       ON THE SERVER so the cookie exists before any page renders. Pointing it
+       at /reset-password directly meant the page loaded with no cookie, the
+       middleware bounced it to /login, and the user was asked for the very
+       password they had forgotten. The callback exchanges first, then hands
+       over — with `next` telling it where. */
     const { error: err } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     })
     if (err) {
       setForgotError('حدث خطأ، تحقق من البريد وحاول مجدداً.')

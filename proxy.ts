@@ -47,6 +47,26 @@ export async function proxy(request: NextRequest) {
   const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner', '/api/keepalive', '/reset-password']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
+  /* SAFETY NET — rescue an auth code that landed on the wrong page.
+   *
+   * Supabase only honours a redirectTo that is on its allow-list; anything
+   * else is silently replaced with the project's Site URL. So a recovery link
+   * can arrive at "/" carrying ?code=, where the guard below sees no session,
+   * bounces to /login, and DROPS THE CODE — the user is asked for the password
+   * they just told us they forgot. This forwards the code to the callback that
+   * knows how to spend it, wherever it happens to land, so the flow no longer
+   * depends on a dashboard setting being right. */
+  const code = request.nextUrl.searchParams.get('code')
+  if (code && !pathname.startsWith('/auth/callback')) {
+    const cb = new URL('/auth/callback', request.url)
+    cb.searchParams.set('code', code)
+    /* only a recovery goes to the password form — a signup confirmation
+       carries a code too, and must not be answered with "set a new password" */
+    const isRecovery = request.nextUrl.searchParams.get('type') === 'recovery'
+    cb.searchParams.set('next', isRecovery ? '/reset-password' : '/')
+    return NextResponse.redirect(cb)
+  }
+
   if (!session && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
