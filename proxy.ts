@@ -38,7 +38,13 @@ export async function proxy(request: NextRequest) {
      login page, and the freeze it exists to prevent happens anyway — with a
      green cron log saying everything is fine. Verified live before this line
      existed: the route answered "Redirecting..." twenty times in a row. */
-  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner', '/api/keepalive', '/api/rs-check']
+  /* '/reset-password' must be public, and its absence is the whole bug users
+     reported: the recovery link arrives, but the session it carries lives in
+     the URL — the SERVER sees no cookie yet, so this guard bounced the page
+     before it could render. The client then consumed the link anyway and the
+     user landed inside the app already signed in, never once shown the "new
+     password" form. The email was never the problem. */
+  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner', '/api/keepalive', '/reset-password']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!session && !isPublic) {

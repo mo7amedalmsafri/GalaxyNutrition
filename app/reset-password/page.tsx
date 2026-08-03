@@ -15,13 +15,29 @@ export default function ResetPasswordPage() {
   const [done, setDone]           = useState(false)
   const [ready, setReady]         = useState(false)   // session confirmed
 
-  // Supabase fires PASSWORD_RECOVERY when the user lands via the reset link
+  /* Show the form once the recovery link has given us a session — by EITHER
+     route, because there are two and only one used to be handled.
+     PASSWORD_RECOVERY fires on the older hash-fragment link; the PKCE link
+     (?code=…) is exchanged silently and fires SIGNED_IN instead, so a page
+     waiting only for PASSWORD_RECOVERY sat on "جارٍ التحقق من الرابط…"
+     forever while the user was, in fact, already signed in.
+     getSession() also covers the case where the exchange completed before
+     this listener was even attached — a race that made the bug intermittent. */
   useEffect(() => {
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
+    let alive = true
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive && data.session) setReady(true)
     })
-    return () => subscription.unsubscribe()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!alive) return
+      if (event === 'PASSWORD_RECOVERY' || (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION'))) {
+        setReady(true)
+      }
+    })
+    return () => { alive = false; subscription.unsubscribe() }
   }, [])
 
   const handleReset = async (e: React.FormEvent) => {
