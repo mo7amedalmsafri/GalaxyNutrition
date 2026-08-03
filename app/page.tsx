@@ -315,6 +315,11 @@ export default function Dashboard() {
     if (isNaN(w) || w < 20 || w > 400) return
     setSavingWeight(true)
     await addWeightEntry(w, today)
+    /* the new weight is the CURRENT weight — every calorie and protein target
+       on this page is derived from it, so the local profile moves with it.
+       Without this the chart updated instantly while every number around it
+       kept quoting the old weight until the next reload. */
+    setProfile(p => ({ ...p, weight: w }))
     const entries = await getWeightEntries()
     if (entries.length > 0) {
       setWeightHistory(entries.map(e => ({ date: e.date as string, weight: e.weight as number })))

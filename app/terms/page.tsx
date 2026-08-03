@@ -81,8 +81,8 @@ const SECTIONS = [
     icon: '✉️',
     titleAr: 'تواصل معنا',
     titleEn: 'Contact Us',
-    ar: 'لأي سؤال عن الشروط، راسلنا من داخل التطبيق (الإعدادات ← تواصل معنا) أو على: mo7amedalmsafri@gmail.com',
-    en: 'For any question about these Terms, contact us from within the app (Settings → Contact Us) or at: mo7amedalmsafri@gmail.com',
+    ar: 'لأي سؤال عن الشروط، راسلنا من داخل التطبيق (الإعدادات ← تواصل معنا) أو على: dietakapp@gmail.com',
+    en: 'For any question about these Terms, contact us from within the app (Settings → Contact Us) or at: dietakapp@gmail.com',
   },
 ]
 

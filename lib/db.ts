@@ -131,16 +131,43 @@ export async function getWeightEntries() {
   return data ?? []
 }
 
+/** Records today's weight — in BOTH places it has to live.
+ *
+ *  `weight_entries` is the history the chart draws. `profiles.weight` is the
+ *  CURRENT weight every calorie, protein and plan target is computed from.
+ *  Writing only the first is what made the app feel haunted: the chart showed
+ *  85, every number on the page kept using the old weight, and the moment the
+ *  user opened settings the figure "suddenly changed" on them. One weight, two
+ *  homes, written together.
+ *
+ *  upsert, not insert: weighing yourself twice in a day used to add two rows
+ *  for the same date and the chart drew two points stacked on one day. */
 export async function addWeightEntry(weight: number, date: string, note?: string) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data } = await supabase
+  const row = { user_id: user.id, weight, date, note }
+
+  /* Upsert needs the UNIQUE(user_id, date) constraint from
+     supabase-weight-fix.sql. The app is already live on the App Store and
+     serves the site directly, so this code can reach real users BEFORE that
+     migration is run — and a bare upsert would then fail silently and lose
+     their reading. It falls back to a plain insert until the constraint
+     exists, which is the old behaviour: saved, just not deduped. */
+  let { data, error } = await supabase
     .from('weight_entries')
-    .insert({ user_id: user.id, weight, date, note })
+    .upsert(row, { onConflict: 'user_id,date' })
     .select()
     .single()
+
+  if (error) {
+    ({ data } = await supabase.from('weight_entries').insert(row).select().single())
+  }
+
+  /* the profile is the source of truth for every target on screen — done
+     separately so a failure here never costs the user their reading */
+  await supabase.from('profiles').update({ weight }).eq('id', user.id)
 
   return data
 }

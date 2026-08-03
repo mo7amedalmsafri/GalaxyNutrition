@@ -53,8 +53,8 @@ const SECTIONS = [
     icon: '✉️',
     titleAr: 'تواصل معنا',
     titleEn: 'Contact Us',
-    ar: 'لأي استفسار عن خصوصيتك راسلنا على: mo7amedalmsafri@gmail.com',
-    en: 'For any privacy questions, contact us at: mo7amedalmsafri@gmail.com',
+    ar: 'لأي استفسار عن خصوصيتك راسلنا على: dietakapp@gmail.com',
+    en: 'For any privacy questions, contact us at: dietakapp@gmail.com',
   },
 ]
 
