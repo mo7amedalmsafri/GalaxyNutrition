@@ -65,15 +65,20 @@ export default function LoginPage() {
     setForgotLoading(true)
     setForgotError('')
     const supabase = createClient()
-    /* Through /auth/callback, never straight to /reset-password.
-       The recovery link carries a ?code= that must be exchanged for a session
-       ON THE SERVER so the cookie exists before any page renders. Pointing it
-       at /reset-password directly meant the page loaded with no cookie, the
-       middleware bounced it to /login, and the user was asked for the very
-       password they had forgotten. The callback exchanges first, then hands
-       over — with `next` telling it where. */
+    /* A BARE path, with no query string.
+       Supabase matches redirectTo against its allow-list and rejects anything
+       that misses — measured: adding "?next=…" made it refuse to send the mail
+       at all ("حدث خطأ، تحقق من البريد"). So we ask for the plain page, and
+       accept that Supabase may still substitute its own Site URL.
+       Where the link actually lands no longer matters: the code is caught and
+       routed by proxy.ts, and this flag tells the app the landing was a
+       recovery even when the URL says nothing about it. */
+    try {
+      localStorage.setItem('dietak-recovery', String(Date.now()))
+    } catch { /* private mode — the URL-based paths still work */ }
+
     const { error: err } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     })
     if (err) {
       setForgotError('حدث خطأ، تحقق من البريد وحاول مجدداً.')

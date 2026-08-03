@@ -60,10 +60,13 @@ export async function proxy(request: NextRequest) {
   if (code && !pathname.startsWith('/auth/callback')) {
     const cb = new URL('/auth/callback', request.url)
     cb.searchParams.set('code', code)
-    /* only a recovery goes to the password form — a signup confirmation
-       carries a code too, and must not be answered with "set a new password" */
-    const isRecovery = request.nextUrl.searchParams.get('type') === 'recovery'
-    cb.searchParams.set('next', isRecovery ? '/reset-password' : '/')
+    /* Hand the callback the page the link was AIMED at, not a guess.
+       If Supabase honoured our redirectTo, that page is already /reset-password
+       and the user lands on the form with a live session. If Supabase replaced
+       it with the Site URL, this is "/" — and the recovery flag saved in the
+       browser takes it from there. Both routes end in the same place, so the
+       flow no longer depends on a dashboard allow-list being correct. */
+    cb.searchParams.set('next', pathname)
     return NextResponse.redirect(cb)
   }
 

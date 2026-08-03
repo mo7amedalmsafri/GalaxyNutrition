@@ -23,10 +23,29 @@ export default function RecoveryCatcher() {
 
   useEffect(() => {
     if (pathname.startsWith('/reset-password')) return
+
+    /* المسار الأول: الجلسة في الـhash */
     const hash = window.location.hash
-    if (!hash || !hash.includes('type=recovery')) return
-    /* replace لا push: الرابط مستهلَك، ولا يصح أن يعيده زر الرجوع */
-    router.replace(`/reset-password${hash}`)
+    if (hash && hash.includes('type=recovery')) {
+      /* replace لا push: الرابط مستهلَك، ولا يصح أن يعيده زر الرجوع */
+      router.replace(`/reset-password${hash}`)
+      return
+    }
+
+    /* المسار الثاني: الرابط لم يقل شيئًا عن نوعه.
+       حين يتجاهل Supabase وجهتنا ويستبدلها بصفحته الافتراضية، يصل المستخدم
+       إلى الرئيسية وقد سُجّل دخوله فعلًا — ولا شيء في الرابط يشي بأن هذه كانت
+       استعادة كلمة مرور. الراية المحفوظة لحظة طلب الاستعادة هي الشاهد الوحيد
+       الباقي، فنقرأها هنا ونكمل ما بدأه المستخدم.
+       تنتهي بعد ثلاثين دقيقة حتى لا تخطف راية منسيّة دخولًا عاديًا لاحقًا،
+       وتُمسح فور استعمالها. */
+    let flag: string | null = null
+    try { flag = localStorage.getItem('dietak-recovery') } catch { return }
+    if (!flag) return
+
+    const fresh = Date.now() - Number(flag) < 30 * 60 * 1000
+    try { localStorage.removeItem('dietak-recovery') } catch { /* ignore */ }
+    if (fresh) router.replace('/reset-password')
   }, [pathname, router])
 
   return null
