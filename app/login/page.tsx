@@ -6,6 +6,13 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { createClient } from '@/lib/supabase/client'
 
+
+/* iOS يدسّ في حقول الإيميل على الصفحات العربية أحرفًا لا تُرى: علامات اتجاه
+   (RLM/LRM وأخواتها) ومسافات بعد الإكمال التلقائي. فحص المتصفح المدمج يرفضها
+   بـ«أدخل عنوان بريد إلكتروني» والمستخدم يرى نصًا سليمًا أمامه — قِيست على
+   جهاز المالك نفسه. التنظيف لحظة الكتابة يمنع الحرف الخفي من الوجود أصلًا. */
+const cleanEmail = (v: string) => v.replace(/[\s‎‏‪-‮⁦-⁩]/g, '')
+
 export default function LoginPage() {
   // ── Login state ──
   const [email, setEmail]       = useState('')
@@ -158,9 +165,9 @@ export default function LoginPage() {
                   <Mail size={16} className="absolute right-3 top-1/2 -translate-y-1/2"
                     style={{ color: 'rgba(151,227,37,0.6)' }} />
                   <input
-                    type="email"
+                    type="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email"
                     value={forgotEmail}
-                    onChange={e => setForgotEmail(e.target.value)}
+                    onChange={e => setForgotEmail(cleanEmail(e.target.value))}
                     placeholder="البريد الإلكتروني"
                     required
                     dir="ltr"
@@ -203,7 +210,7 @@ export default function LoginPage() {
               <Mail size={16} className="absolute right-3 top-1/2 -translate-y-1/2"
                 style={{ color: 'rgba(151,227,37,0.6)' }} />
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                type="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" value={email} onChange={e => setEmail(cleanEmail(e.target.value))}
                 placeholder="البريد الإلكتروني" required dir="ltr"
                 className="galaxy-input w-full pr-10 pl-4 py-3 text-sm"
               />
