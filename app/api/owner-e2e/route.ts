@@ -54,7 +54,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       email: target,
-      /* الرابط الذي كان سيُرسل في الإيميل حرفيًا */
+      /* الرابط المباشر — يفتح صفحة كلمة المرور مباشرة والتوكن في الاستعلام.
+         صفر تحويلات: رابط verify القديم يمر بثلاث قفزات والجلسة في الـhash،
+         وقِيس أن متصفح الآيفون يفقدها في الطريق بينما متصفح آخر يوصلها. */
+      direct_link: data.properties?.hashed_token
+        ? `https://dietak.vercel.app/reset-password?token_hash=${data.properties.hashed_token}`
+        : null,
+      /* الرابط الذي كان سيُرسل في الإيميل حرفيًا — للمقارنة */
       link: data.properties?.action_link,
       redirect_to: data.properties?.redirect_to,
       verification_type: data.properties?.verification_type,

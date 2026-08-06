@@ -27,6 +27,32 @@ export default function ResetPasswordPage() {
     const supabase = createClient()
     let alive = true
 
+    /* المسار المباشر — token_hash في الاستعلام، وهو الوحيد بلا تحويلات.
+       الرابط القديم يمر بثلاث قفزات (تحقق ← نطاق قديم ← الموقع) والجلسة
+       معلّقة في الـhash — وقِيس فعليًا أن متصفح الآيفون يفقدها في الطريق
+       بينما متصفح آخر يوصلها: الرابط نفسه نجح هنا وفشل هناك. هذا الرابط
+       يفتح هذه الصفحة مباشرة والتوكن في الاستعلام (لا يسقط في تحويل)،
+       والصفحة تتحقق منه بنفسها — صفر قفزات، صفر فقدان. */
+    const token_hash = new URLSearchParams(window.location.search).get('token_hash')
+    if (token_hash) {
+      const supa = supabase
+      supa.auth.verifyOtp({ type: 'recovery', token_hash }).then(({ data, error: vErr }) => {
+        if (!alive) return
+        if (data?.session && !vErr) {
+          window.history.replaceState(null, '', window.location.pathname)
+          setReady(true)
+        } else {
+          /* الفشل يُقال على الشاشة بنصّه — «ما اشتغل» بلا سبب ظاهر كلّف
+             ست جولات تخمين */
+          setReady(true)
+          setError(vErr?.message?.match(/expired|invalid/i)
+            ? 'الرابط انتهت صلاحيته أو استُخدم من قبل — اطلب رابطاً جديداً.'
+            : `تعذّر التحقق: ${vErr?.message ?? 'خطأ غير معروف'}`)
+        }
+      })
+      return () => { alive = false }
+    }
+
     /* استهلاك الـhash يدويًا — الخط الحاسم، وسبب وجوده مُقاس لا مُتخيَّل.
        مُشي التدفق كاملًا آليًا (owner-e2e): الرابط وصل، والتحويل إلى هنا نجح،
        والتوكنات جالسة في الـhash صالحة — والمكتبة لم تستهلكها؛ بقيت الصفحة

@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
      before it could render. The client then consumed the link anyway and the
      user landed inside the app already signed in, never once shown the "new
      password" form. The email was never the problem. */
-  const publicPaths = ['/login', '/register', '/auth/callback', '/onboarding', '/privacy', '/terms', '/owner', '/api/keepalive', '/reset-password', '/api/owner-e2e']
+  const publicPaths = ['/login', '/register', '/auth/callback', '/auth/confirm', '/onboarding', '/privacy', '/terms', '/owner', '/api/keepalive', '/reset-password', '/api/owner-e2e']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   /* SAFETY NET — rescue an auth code that landed on the wrong page.
